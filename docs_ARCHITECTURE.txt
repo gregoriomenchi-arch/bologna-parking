@@ -1,0 +1,28 @@
+# Bologna Parking App — Architettura
+
+## Obiettivo
+App mobile per trovare parcheggio a Bologna in tempo reale,
+con predizioni basate su dati storici.
+
+## Zona pilota
+Saragozza, Murri, zona Ospedale Sant'Orsola
+
+## Stack
+- Backend: Python + FastAPI
+- Frontend: React Native + MapLibre
+- Database: PostGIS (PostgreSQL)
+- Dati live: SostaBo API + TPER
+- ML: Prophet (predizioni orarie)
+- Deploy: Railway
+
+## Stato attuale
+- [ ] Fase 0: Setup ambiente
+- [ ] Fase 1: Backend + dati SostaBo
+- [ ] Fase 2: Frontend + heatmap
+- [ ] Fase 3: Predizioni ML
+- [ ] Fase 4: Pubblicazione
+
+## Come avviare Claude Code per questo progetto
+cd bologna-parking
+claude
+"Leggi il file docs/ARCHITECTURE.md prima di tutto"
