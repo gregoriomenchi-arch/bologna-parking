@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Bologna Parking",
+    "slug": "bologna-parking",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.sveva.bolognparking"
+    },
+    "android": {
+      "package": "com.sveva.bolognparking",
+      "adaptiveIcon": {
+        "backgroundColor": "#E91E63"
+      }
+    }
+  }
+}
