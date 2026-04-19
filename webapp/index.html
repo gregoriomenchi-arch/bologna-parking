@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bologna Parking</title>
 
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
@@ -32,76 +30,91 @@
       z-index: 1000;
     }
 
-    header h1 {
-      font-size: 1.1rem;
-      font-weight: 700;
-      letter-spacing: .5px;
-    }
+    header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: .5px; }
+    #status    { font-size: .75rem; color: #aaa; }
 
-    #status {
-      font-size: .75rem;
-      color: #aaa;
-    }
+    #map { flex: 1; }
 
-    #map {
-      flex: 1;
-    }
-
-    /* Legend */
     .legend {
       background: rgba(22, 33, 62, .92);
       border-radius: 8px;
       padding: 8px 12px;
       font-size: .75rem;
-      line-height: 1.8;
+      line-height: 1.9;
       box-shadow: 0 2px 8px rgba(0,0,0,.4);
       color: #eee;
     }
 
     .legend-dot {
       display: inline-block;
-      width: 12px;
-      height: 12px;
+      width: 12px; height: 12px;
       border-radius: 50%;
       margin-right: 6px;
       vertical-align: middle;
     }
 
-    /* Custom marker dots */
+    .legend-line {
+      display: inline-block;
+      width: 28px; height: 4px;
+      border-radius: 2px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
     .marker-dot {
       border-radius: 50%;
       border: 2px solid rgba(255,255,255,.7);
       box-shadow: 0 2px 6px rgba(0,0,0,.5);
     }
 
-    /* Popup */
     .leaflet-popup-content-wrapper {
-      background: #16213e;
-      color: #eee;
+      background: #16213e; color: #eee;
       border-radius: 10px;
       border: 1px solid rgba(255,255,255,.1);
     }
     .leaflet-popup-tip { background: #16213e; }
     .leaflet-popup-content { margin: 10px 14px; }
 
-    .popup-name {
-      font-weight: 700;
-      font-size: .95rem;
-      margin-bottom: 4px;
-    }
-    .popup-row {
-      font-size: .82rem;
-      color: #ccc;
-      line-height: 1.6;
-    }
+    .popup-name { font-weight: 700; font-size: .95rem; margin-bottom: 4px; }
+    .popup-row  { font-size: .82rem; color: #ccc; line-height: 1.6; }
+
     .popup-badge {
       display: inline-block;
-      padding: 1px 8px;
-      border-radius: 20px;
-      font-size: .75rem;
-      font-weight: 600;
-      margin-top: 6px;
+      padding: 1px 8px; border-radius: 20px;
+      font-size: .75rem; font-weight: 600; margin-top: 6px;
     }
+
+    #loading-streets {
+      display: none;
+      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+      background: rgba(22,33,62,.95); color: #aaa;
+      padding: 6px 14px; border-radius: 20px; font-size: .75rem;
+      z-index: 9000; box-shadow: 0 2px 8px rgba(0,0,0,.5);
+    }
+
+    #event-banner {
+      display: none;
+      position: fixed; top: 48px; left: 0; right: 0;
+      z-index: 9500;
+    }
+
+    .event-banner-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 16px;
+      font-size: .82rem; line-height: 1.4;
+      border-bottom: 1px solid rgba(0,0,0,.15);
+    }
+    /* arancione vibrante per imminente, tono più scuro per attivo */
+    .event-banner-item.stato-soon   { background: #e65100; color: #fff; }
+    .event-banner-item.stato-active { background: #bf360c; color: #fff; }
+
+    .event-banner-text { flex: 1; }
+    .event-banner-text strong { font-size: .88rem; }
+    .event-banner-close {
+      background: none; border: none; color: rgba(255,255,255,.7);
+      font-size: 1.1rem; cursor: pointer; padding: 0 0 0 12px; line-height: 1;
+    }
+    .event-banner-close:hover { color: #fff; }
   </style>
 </head>
 <body>
@@ -111,81 +124,151 @@
   <span id="status">Caricamento…</span>
 </header>
 
-<!-- Banner errore visibile -->
 <div id="error-banner" style="
   display:none; background:#b71c1c; color:#fff;
   padding:8px 16px; font-size:.85rem; text-align:center;
   position:fixed; top:48px; left:0; right:0; z-index:9999;
 "></div>
 
+<div id="event-banner"></div>
 <div id="map"></div>
+<div id="loading-streets">⏳ Caricamento strade…</div>
 
 <script>
-  // ── Mappa centrata su Bologna ──────────────────────────────────────────
-  const map = L.map("map", {
-    center: [44.4938, 11.3427],
-    zoom: 14,
-    zoomControl: true
-  });
+  // ── Mappa ─────────────────────────────────────────────────────────────
+  const map = L.map("map", { center: [44.4938, 11.3427], zoom: 14 });
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    maxZoom: 19
+    maxZoom: 19,
   }).addTo(map);
 
-  // ── Legenda ────────────────────────────────────────────────────────────
+  // ── Legenda ───────────────────────────────────────────────────────────
   const legend = L.control({ position: "bottomright" });
   legend.onAdd = () => {
     const div = L.DomUtil.create("div", "legend");
     div.innerHTML = `
+      <strong>Probabilità parcheggio</strong><br>
+      <span class="legend-line" style="background:#4caf50"></span>alta (&gt;70)<br>
+      <span class="legend-line" style="background:#ffeb3b"></span>media (40–70)<br>
+      <span class="legend-line" style="background:#f44336"></span>bassa (&lt;40)<br>
+      <hr style="border-color:#444;margin:4px 0">
+      <span class="legend-line" style="background:#aaa;height:5px"></span>principale<br>
+      <span class="legend-line" style="background:#aaa;height:2px"></span>secondaria<br>
+      <hr style="border-color:#444;margin:4px 0">
       <strong>Scambiatori</strong> (cerchio)<br>
       <span class="legend-dot" style="background:#4caf50"></span>&lt; 50% — libero<br>
       <span class="legend-dot" style="background:#ff9800"></span>50–80% — medio<br>
-      <span class="legend-dot" style="background:#f44336"></span>&gt; 80% — pieno<br>
-      <hr style="border-color:#444;margin:4px 0">
-      <strong>Zone città</strong> (quadrato)<br>
-      <span class="legend-dot" style="background:#42a5f5;border-radius:2px"></span>strisce blu<br>
-      <span class="legend-dot" style="background:#b0bec5;border-radius:2px"></span>strisce bianche<br>
-      <span class="legend-dot" style="background:#ab47bc;border-radius:2px"></span>struttura/raso
+      <span class="legend-dot" style="background:#f44336"></span>&gt; 80% — pieno
     `;
     return div;
   };
   legend.addTo(map);
 
-  // ── Utility: colore in base all'occupazione ────────────────────────────
+  // ── Utility colori ────────────────────────────────────────────────────
+  function scoreToColor(score) {
+    // 0 → rosso (hsl 0°), 100 → verde (hsl 120°)
+    const hue = Math.round(score * 1.2);
+    return `hsl(${hue},80%,42%)`;
+  }
+
   function colorByOccupancy(occupato, totale) {
-    if (!totale || totale === 0) return "#9e9e9e";
-    const pct = occupato / totale;
-    if (pct < 0.5)  return "#4caf50"; // verde
-    if (pct < 0.8)  return "#ff9800"; // arancio
-    return "#f44336";                  // rosso
+    if (!totale) return "#9e9e9e";
+    const p = occupato / totale;
+    if (p < 0.5) return "#4caf50";
+    if (p < 0.8) return "#ff9800";
+    return "#f44336";
   }
 
   function labelByOccupancy(occupato, totale) {
-    if (!totale || totale === 0) return { text: "N/D", bg: "#9e9e9e" };
-    const pct = occupato / totale;
-    if (pct < 0.5)  return { text: "Libero",  bg: "#4caf50" };
-    if (pct < 0.8)  return { text: "Medio",   bg: "#ff9800" };
-    return                  { text: "Pieno",   bg: "#f44336" };
+    if (!totale) return { text: "N/D", bg: "#9e9e9e" };
+    const p = occupato / totale;
+    if (p < 0.5) return { text: "Libero", bg: "#4caf50" };
+    if (p < 0.8) return { text: "Medio",  bg: "#ff9800" };
+    return               { text: "Pieno",  bg: "#f44336" };
   }
 
   // ── Layer groups ──────────────────────────────────────────────────────
-  const markersLayer = L.layerGroup().addTo(map);  // scambiatori (cerchi)
-  const zoneLayer    = L.layerGroup().addTo(map);  // zone città (quadrati)
+  const stradeLayer   = L.layerGroup().addTo(map);  // polyline strade
+  const markersLayer  = L.layerGroup().addTo(map);  // cerchi scambiatori
   let firstLoad = true;
 
-  // ── Colore marker zona ─────────────────────────────────────────────────
-  function colorByTipo(tipo) {
-    if (!tipo) return "#78909c";
-    if (tipo === "strisce_blu")     return "#42a5f5";
-    if (tipo === "strisce_bianche") return "#b0bec5";
-    return "#ab47bc"; // struttura / raso / altro
+  // ── Render strade (condiviso tra statico e live) ─────────────────────
+  function renderStrade(geojson, source) {
+    stradeLayer.clearLayers();
+
+    // Score medio per nome strada → segmenti della stessa via hanno stesso colore
+    const nameSum = {}, nameCount = {};
+    for (const f of geojson.features || []) {
+      const n = f.properties.name;
+      const s = f.properties.score ?? 50;
+      if (n) { nameSum[n] = (nameSum[n] || 0) + s; nameCount[n] = (nameCount[n] || 0) + 1; }
+    }
+    const nameScore = {};
+    for (const n in nameSum) nameScore[n] = nameSum[n] / nameCount[n];
+
+    L.geoJSON(geojson, {
+      style: feature => {
+        const n     = feature.properties.name;
+        const score = n && nameScore[n] != null ? nameScore[n] : (feature.properties.score ?? 50);
+        const hw    = feature.properties.highway;
+        const weight = hw === "primary"   ? 6
+                     : hw === "secondary" ? 4
+                     : 2.5;
+        return { color: scoreToColor(score), weight, opacity: 0.85 };
+      },
+      onEachFeature: (feature, layer) => {
+        const p     = feature.properties;
+        const n     = p.name;
+        const score = Math.round(n && nameScore[n] != null ? nameScore[n] : (p.score ?? 50));
+        const color = scoreToColor(score);
+        layer.bindPopup(`
+          <div class="popup-name">${n || "Strada"}</div>
+          <div class="popup-row">
+            Tipo: <strong>${p.highway}</strong><br>
+            Score: <strong>${score}/100</strong>
+            <span class="popup-badge" style="background:${color};color:#fff">
+              ${score >= 70 ? "Alta" : score >= 40 ? "Media" : "Bassa"} probabilità
+            </span>
+          </div>
+        `);
+      },
+    }).addTo(stradeLayer);
+    console.log(`[Bologna Parking] strade (${source}): ${geojson.features?.length}`);
   }
 
-  // ── Fetch dati e piazza marker ─────────────────────────────────────────
-  async function caricaParcheggi() {
-    const statusEl = document.getElementById("status");
+  // ── Strade colorate ───────────────────────────────────────────────────
+  async function caricaStrade() {
+    const loadingEl = document.getElementById("loading-streets");
+    loadingEl.style.display = "block";
 
+    // 1. File statico locale — istantaneo, funziona senza backend
+    try {
+      const res = await fetch("./strade_bologna.json");
+      if (res.ok) {
+        const geojson = await res.json();
+        renderStrade(geojson, "statico");
+      }
+    } catch (err) {
+      console.warn("[Bologna Parking] file statico non disponibile:", err.message);
+    } finally {
+      loadingEl.style.display = "none";
+    }
+
+    // 2. Backend live (score aggiornati) — aggiorna silenziosamente se disponibile
+    try {
+      const res = await fetch("http://localhost:8000/strade/probabilita",
+                              { signal: AbortSignal.timeout(5000) });
+      if (res.ok) {
+        const geojson = await res.json();
+        renderStrade(geojson, "live");
+      }
+    } catch (_) { /* backend opzionale */ }
+  }
+
+  // ── Scambiatori (cerchi) ──────────────────────────────────────────────
+  async function caricaParcheggi() {
+    const statusEl  = document.getElementById("status");
     const errorBanner = document.getElementById("error-banner");
     errorBanner.style.display = "none";
 
@@ -196,169 +279,171 @@
 
       console.log("[Bologna Parking] dati ricevuti:", data);
 
-      // Supporta sia array diretto che { parcheggi: [...] }
       const lista = Array.isArray(data) ? data : (data.parcheggi ?? []);
-
-      if (lista.length === 0) {
-        statusEl.textContent = "Nessun parcheggio trovato";
-        return;
-      }
+      if (lista.length === 0) { statusEl.textContent = "Nessun parcheggio"; return; }
 
       markersLayer.clearLayers();
       const bounds = [];
 
       lista.forEach(p => {
-        // Il backend restituisce coordinate come oggetto annidato: { lat, lon }
-        // e il campo occupati si chiama posti_occupati
-        const lat  = p.coordinate?.lat  ?? p.lat  ?? p.latitude;
-        const lon  = p.coordinate?.lon  ?? p.lon  ?? p.lng ?? p.longitude;
-        const nome = p.nome ?? p.name ?? "Parcheggio";
-        const totale   = p.posti_totali  ?? p.total    ?? p.capacity ?? 0;
-        const occupati = p.posti_occupati ?? p.occupati ?? p.occupied ?? (totale - (p.posti_liberi ?? 0));
-        const liberi   = p.posti_liberi  ?? p.free     ?? (totale - occupati);
+        const lat     = p.coordinate?.lat ?? p.lat ?? p.latitude;
+        const lon     = p.coordinate?.lon ?? p.lon ?? p.lng ?? p.longitude;
+        const nome    = p.nome ?? p.name ?? "Parcheggio";
+        const totale  = p.posti_totali   ?? p.total    ?? p.capacity ?? 0;
+        const occupati= p.posti_occupati ?? p.occupati ?? p.occupied ?? (totale - (p.posti_liberi ?? 0));
+        const liberi  = p.posti_liberi   ?? p.free     ?? (totale - occupati);
 
         console.log(`  ${nome}: lat=${lat} lon=${lon} liberi=${liberi}/${totale}`);
-
-        if (lat == null || lon == null) return; // skip se mancano coordinate
+        if (lat == null || lon == null) return;
 
         const color = colorByOccupancy(occupati, totale);
         const badge = labelByOccupancy(occupati, totale);
 
         const icon = L.divIcon({
           className: "",
-          html: `<div class="marker-dot" style="width:20px;height:20px;background:${color}"></div>`,
-          iconSize:   [20, 20],
-          iconAnchor: [10, 10],
-          popupAnchor:[0, -14]
+          html: `<div class="marker-dot" style="width:22px;height:22px;background:${color}"></div>`,
+          iconSize: [22, 22], iconAnchor: [11, 11], popupAnchor: [0, -14],
         });
 
-        const marker = L.marker([lat, lon], { icon });
-        marker.bindPopup(`
-          <div class="popup-name">${nome}</div>
-          <div class="popup-row">
-            Posti liberi: <strong>${liberi}</strong> / ${totale}<br>
-            Occupazione: <strong>${totale ? Math.round(occupati/totale*100) : "—"}%</strong>
-          </div>
-          <span class="popup-badge" style="background:${badge.bg}">${badge.text}</span>
-        `);
-        markersLayer.addLayer(marker);
+        L.marker([lat, lon], { icon })
+          .bindPopup(`
+            <div class="popup-name">${nome}</div>
+            <div class="popup-row">
+              Posti liberi: <strong>${liberi}</strong> / ${totale}<br>
+              Occupazione: <strong>${totale ? Math.round(occupati / totale * 100) : "—"}%</strong>
+            </div>
+            <span class="popup-badge" style="background:${badge.bg}">${badge.text}</span>
+          `)
+          .addTo(markersLayer);
         bounds.push([lat, lon]);
       });
 
-      // Al primo caricamento adatta la vista a tutti i marker
       if (firstLoad && bounds.length > 0) {
-        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
         firstLoad = false;
       }
 
-      statusEl.textContent = `${lista.length} parcheggi — ${new Date().toLocaleTimeString("it-IT")}`;
+      statusEl.textContent = `${lista.length} scambiatori — ${new Date().toLocaleTimeString("it-IT")}`;
 
     } catch (err) {
       console.error("[Bologna Parking] fetch fallita:", err);
       statusEl.textContent = "Errore fetch";
-      errorBanner.textContent = `Errore: ${err.message} — controlla che il backend sia attivo su localhost:8000`;
+      errorBanner.textContent = `Errore: ${err.message} — backend attivo su localhost:8000?`;
       errorBanner.style.display = "block";
 
-      // ── Dati di demo se il backend non è raggiungibile ─────────────────
+      // Demo fallback
       const demo = [
-        { nome: "Parcheggio Saragozza",      lat: 44.4920, lon: 11.3250, posti_totali: 120, occupati: 40  },
-        { nome: "Parcheggio Murri",           lat: 44.4870, lon: 11.3560, posti_totali: 80,  occupati: 65  },
-        { nome: "Parcheggio Sant'Orsola",     lat: 44.4890, lon: 11.3630, posti_totali: 200, occupati: 175 },
-        { nome: "Parcheggio Malpighi",        lat: 44.4960, lon: 11.3390, posti_totali: 60,  occupati: 10  },
-        { nome: "Parcheggio Via Aurelio Saffi",lat: 44.4945, lon: 11.3310, posti_totali: 90, occupati: 72  },
+        { nome: "Parcheggio Saragozza",       lat: 44.4920, lon: 11.3250, posti_totali: 120, posti_occupati: 40  },
+        { nome: "Parcheggio Murri",            lat: 44.4870, lon: 11.3560, posti_totali: 80,  posti_occupati: 65  },
+        { nome: "Parcheggio Sant'Orsola",      lat: 44.4890, lon: 11.3630, posti_totali: 200, posti_occupati: 175 },
+        { nome: "Parcheggio Malpighi",         lat: 44.4960, lon: 11.3390, posti_totali: 60,  posti_occupati: 10  },
+        { nome: "Parcheggio Via A. Saffi",     lat: 44.4945, lon: 11.3310, posti_totali: 90,  posti_occupati: 72  },
       ];
-
       demo.forEach(p => {
-        const color = colorByOccupancy(p.occupati, p.posti_totali);
-        const badge = labelByOccupancy(p.occupati, p.posti_totali);
-        const liberi = p.posti_totali - p.occupati;
-
+        const color = colorByOccupancy(p.posti_occupati, p.posti_totali);
+        const badge = labelByOccupancy(p.posti_occupati, p.posti_totali);
+        const liberi = p.posti_totali - p.posti_occupati;
         const icon = L.divIcon({
           className: "",
-          html: `<div class="marker-dot" style="width:20px;height:20px;background:${color}"></div>`,
-          iconSize: [20,20], iconAnchor: [10,10], popupAnchor: [0,-14]
+          html: `<div class="marker-dot" style="width:22px;height:22px;background:${color}"></div>`,
+          iconSize: [22, 22], iconAnchor: [11, 11], popupAnchor: [0, -14],
         });
-
         L.marker([p.lat, p.lon], { icon })
-          .addTo(map)
+          .addTo(markersLayer)
           .bindPopup(`
             <div class="popup-name">${p.nome} <em style="font-size:.7rem;color:#aaa">(demo)</em></div>
             <div class="popup-row">
               Posti liberi: <strong>${liberi}</strong> / ${p.posti_totali}<br>
-              Occupazione: <strong>${Math.round(p.occupati/p.posti_totali*100)}%</strong>
+              Occupazione: <strong>${Math.round(p.posti_occupati / p.posti_totali * 100)}%</strong>
             </div>
             <span class="popup-badge" style="background:${badge.bg}">${badge.text}</span>
           `);
       });
-
       statusEl.textContent = "Demo — backend non raggiungibile";
     }
   }
 
-  // ── Fetch zone città (marker quadrati) ────────────────────────────────
-  async function caricaZone() {
+  // ── Banner eventi ─────────────────────────────────────────────────────
+  const _dismissedEvents = new Set();
+
+  function _formatOra(isoStr) {
+    if (!isoStr) return "";
     try {
-      const res = await fetch("http://localhost:8000/parcheggi/zone");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const lista = await res.json();
-
-      console.log("[Bologna Parking] zone ricevute:", lista.length);
-
-      zoneLayer.clearLayers();
-      const bounds = [];
-
-      lista.forEach(p => {
-        const lat  = p.coordinate?.lat;
-        const lon  = p.coordinate?.lon;
-        if (lat == null || lon == null) return;
-
-        const color = colorByTipo(p.tipo);
-        const tipoLabel = (p.tipo ?? "N/D").replace("_", " ");
-
-        const icon = L.divIcon({
-          className: "",
-          html: `<div style="
-            width:14px; height:14px;
-            background:${color};
-            border:2px solid rgba(255,255,255,.7);
-            border-radius:2px;
-            box-shadow:0 2px 5px rgba(0,0,0,.5);
-          "></div>`,
-          iconSize:    [14, 14],
-          iconAnchor:  [7, 7],
-          popupAnchor: [0, -10]
-        });
-
-        const rows = [
-          `Tipo: <strong>${tipoLabel}</strong>`,
-          p.tariffa  ? `Tariffa: <strong>${p.tariffa}</strong>`    : null,
-          p.zona     ? `Zona: <strong>${p.zona}</strong>`           : null,
-          p.posti_totali ? `Posti: <strong>${p.posti_totali}</strong>` : null,
-        ].filter(Boolean).join("<br>");
-
-        L.marker([lat, lon], { icon })
-          .bindPopup(`<div class="popup-name">${p.nome}</div><div class="popup-row">${rows}</div>`)
-          .addTo(zoneLayer);
-
-        bounds.push([lat, lon]);
-      });
-
-      // fitBounds solo se gli scambiatori non hanno già mosso la vista
-      if (firstLoad && bounds.length > 0) {
-        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
-        firstLoad = false;
-      }
-
-    } catch (err) {
-      console.warn("[Bologna Parking] zone non disponibili:", err.message);
-    }
+      return new Date(isoStr).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+    } catch { return ""; }
   }
 
-  caricaParcheggi();
-  caricaZone();
+  function _isActive(ev) {
+    const now = Date.now();
+    const start = new Date(ev.data_inizio).getTime();
+    const end   = ev.data_fine ? new Date(ev.data_fine).getTime() : start + 2 * 3600_000;
+    return start <= now && now <= end;
+  }
 
-  // Aggiorna ogni 60 secondi
+  function renderEventBanner(eventi) {
+    const banner = document.getElementById("event-banner");
+    const visible = eventi.filter(ev => !_dismissedEvents.has(ev.id ?? ev.nome));
+    if (!visible.length) { banner.style.display = "none"; return; }
+
+    banner.innerHTML = visible.map(ev => {
+      const active  = _isActive(ev);
+      const ora     = _formatOra(ev.data_inizio);
+      const statoClass = active ? "stato-active" : "stato-soon";
+      // Formato: "Partita Bologna FC alle 20:45 — zona Dall'Ara: parcheggio difficile"
+      const quando  = active ? "in corso" : `alle ${ora}`;
+      const zona    = VENUE_ZONE[ev.venue] ?? ev.venue;
+      const diff    = ev.impatto === "alto" ? "parcheggio difficile" : "traffico intenso";
+      const key     = ev.id ?? ev.nome;
+      return `
+        <div class="event-banner-item ${statoClass}">
+          <div class="event-banner-text">
+            <strong>${ev.nome}</strong> ${quando} — zona ${zona}: ${diff}
+          </div>
+          <button class="event-banner-close" onclick="_dismissEvent(${JSON.stringify(key)})">✕</button>
+        </div>`;
+    }).join("");
+    banner.style.display = "block";
+  }
+
+  const VENUE_ZONE = {
+    "Stadio Renato Dall'Ara": "Dall'Ara",
+    "Fiera di Bologna":        "Fiera",
+    "Unipol Arena":            "Casalecchio",
+    "Teatro Comunale":         "Centro",
+  };
+
+  window._dismissEvent = function(key) {
+    _dismissedEvents.add(key);
+    const banner = document.getElementById("event-banner");
+    const remaining = banner.querySelectorAll(".event-banner-item").length - 1;
+    if (remaining <= 0) banner.style.display = "none";
+    else banner.querySelector(`[onclick="_dismissEvent(${JSON.stringify(key)})"]`)
+               ?.closest(".event-banner-item")?.remove();
+  };
+
+  async function caricaEventi() {
+    try {
+      const res = await fetch("http://localhost:8000/eventi/attivi?entro_ore=2",
+                              { signal: AbortSignal.timeout(4000) });
+      if (!res.ok) return;
+      const eventi = await res.json();
+      if (Array.isArray(eventi) && eventi.length) {
+        renderEventBanner(eventi);
+      }
+    } catch (_) { /* backend opzionale */ }
+  }
+
+  // ── Avvio ─────────────────────────────────────────────────────────────
+  caricaStrade();
+  caricaParcheggi();
+  caricaEventi();
+
+  // Strade ogni 5 minuti (score cambia con i dati live)
+  setInterval(caricaStrade,   5 * 60 * 1000);
+  // Scambiatori ogni 60 secondi
   setInterval(caricaParcheggi, 60_000);
+  // Banner eventi ogni 5 minuti
+  setInterval(caricaEventi, 5 * 60 * 1000);
 </script>
 </body>
 </html>
