@@ -260,7 +260,7 @@
 
     // 2. Backend live (score aggiornati) — aggiorna silenziosamente se disponibile
     try {
-      const res = await fetch("${API}/strade/probabilita",
+      const res = await fetch(`${API}/strade/probabilita`,
                               { signal: AbortSignal.timeout(5000) });
       if (res.ok) {
         const geojson = await res.json();
@@ -314,7 +314,7 @@
 
     // Carica sempre i parcheggi statici (non dipendono dal backend live)
     try {
-      const resS = await fetch("${API}/parcheggi/statici",
+      const resS = await fetch(`${API}/parcheggi/statici`,
                                { signal: AbortSignal.timeout(4000) });
       if (resS.ok) {
         const staticList = await resS.json();
@@ -324,7 +324,7 @@
     } catch (_) { /* backend opzionale */ }
 
     try {
-      const res = await fetch("${API}/parcheggi/disponibilita");
+      const res = await fetch(`${API}/parcheggi/disponibilita`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
@@ -338,7 +338,7 @@
 
       // Prima aggiungi statici (così i live sono sopra)
       try {
-        const resS2 = await fetch("${API}/parcheggi/statici",
+        const resS2 = await fetch(`${API}/parcheggi/statici`,
                                   { signal: AbortSignal.timeout(4000) });
         if (resS2.ok) {
           const sl = await resS2.json();
@@ -440,7 +440,7 @@
 
   async function caricaEventi() {
     try {
-      const res = await fetch("${API}/eventi/attivi?entro_ore=2",
+      const res = await fetch(`${API}/eventi/attivi?entro_ore=2`,
                               { signal: AbortSignal.timeout(4000) });
       if (!res.ok) return;
       const eventi = await res.json();
