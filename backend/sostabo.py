@@ -49,6 +49,7 @@ class ParcheggioDisponibilita(BaseModel):
     occupazione_pct: float          # 0–100
     coordinate: Optional[Coordinate]
     aggiornato_at: Optional[datetime]
+    fonte: Optional[str] = None     # "live" | "static"
 
 
 class ParcheggioStruttura(BaseModel):
@@ -264,3 +265,67 @@ class SostaBoClient:
         resp = await self._http.get(url, params=params)
         resp.raise_for_status()
         return resp.json()
+
+
+# ---------------------------------------------------------------------------
+# Parcheggi scambiatori / grandi strutture — dati statici con stima oraria
+# ---------------------------------------------------------------------------
+
+# (nome, indirizzo, lat, lon, posti_totali, occupazione_base_%)
+# occupazione_base = occupazione tipica nelle ore centrali del giorno
+_STATIC_PARCHEGGI_DEF: list[tuple] = [
+    ("Parcheggio Tanari",         "Via Luigi Tanari 17",     44.5089, 11.3401, 350, 55),
+    ("Parcheggio ex Staveco",     "Viale Panzacchi 10",      44.4889, 11.3089, 500, 40),
+    ("Parcheggio Antistadio",     "Via Andrea Costa",        44.4934, 11.3089, 400, 45),
+    ("Parcheggio Stazione FS",    "Via Matteotti 5",         44.5058, 11.3442, 600, 80),
+    ("Parcheggio Saba S.Orsola",  "Via Albertoni 8",         44.4889, 11.3567, 450, 70),
+    ("Parcheggio Certosa",        "Via della Certosa",       44.4756, 11.3089, 300, 35),
+    ("Parcheggio VIII Agosto",    "Piazza VIII Agosto",      44.5012, 11.3456, 250, 75),
+    ("Parcheggio Nuovo Stazione", "Via Fioravanti 4",        44.5078, 11.3398, 700, 65),
+    ("Parcheggio Michelino",      "Via Michelino",           44.5234, 11.3567, 400, 50),
+    ("Parcheggio Costa",          "Via Andrea Costa (est)",  44.4912, 11.3123, 320, 45),
+]
+
+# Moltiplicatori orari applicati alla occupazione_base
+_ORA_FACTOR: list[tuple[int, int, float]] = [
+    ( 0,  7, 0.15),   # notte
+    ( 7,  9, 0.70),   # mattina presto
+    ( 9, 12, 1.00),   # mattina
+    (12, 14, 0.90),   # pranzo
+    (14, 17, 1.00),   # pomeriggio
+    (17, 20, 1.10),   # picco serale
+    (20, 23, 0.65),   # sera
+    (23, 24, 0.20),   # tarda notte
+]
+
+
+def _ora_factor(hour: int) -> float:
+    for start, end, factor in _ORA_FACTOR:
+        if start <= hour < end:
+            return factor
+    return 1.0
+
+
+def get_static_parcheggi() -> list[ParcheggioDisponibilita]:
+    """
+    Restituisce i 10 grandi parcheggi/scambiatori con occupazione stimata
+    in base all'ora corrente (nessuna chiamata esterna).
+    """
+    now    = datetime.now()
+    factor = _ora_factor(now.hour)
+    result = []
+    for nome, _indirizzo, lat, lon, totale, base_pct in _STATIC_PARCHEGGI_DEF:
+        occ_pct   = min(99.0, round(base_pct * factor, 1))
+        occupati  = round(totale * occ_pct / 100)
+        liberi    = totale - occupati
+        result.append(ParcheggioDisponibilita(
+            nome=nome,
+            posti_liberi=liberi,
+            posti_occupati=occupati,
+            posti_totali=totale,
+            occupazione_pct=occ_pct,
+            coordinate=Coordinate(lat=lat, lon=lon),
+            aggiornato_at=now,
+            fonte="static",
+        ))
+    return result

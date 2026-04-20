@@ -1,0 +1,247 @@
+2026-04-19 22:19:52 [INFO] Scheduler avviato — raccolta ogni 600 secondi (10 min)
+2026-04-19 22:19:54 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-19 22:19:54 [INFO] [ciclo 1] 2026-04-19 20:19:52 UTC — salvati 3 record SostaBo
+2026-04-19 22:29:55 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-19 22:29:55 [INFO] [ciclo 2] 2026-04-19 20:29:54 UTC — salvati 3 record SostaBo
+2026-04-19 22:39:56 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-19 22:39:56 [INFO] [ciclo 3] 2026-04-19 20:39:55 UTC — salvati 3 record SostaBo
+2026-04-19 22:49:57 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-19 22:49:57 [INFO] [ciclo 4] 2026-04-19 20:49:56 UTC — salvati 3 record SostaBo
+2026-04-19 22:59:58 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-19 22:59:58 [INFO] [ciclo 5] 2026-04-19 20:59:57 UTC — salvati 3 record SostaBo
+2026-04-19 23:09:58 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-19 23:09:58 [INFO] [ciclo 6] 2026-04-19 21:09:58 UTC — salvati 3 record SostaBo
+2026-04-19 23:19:59 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-19 23:19:59 [INFO] [ciclo 7] 2026-04-19 21:19:58 UTC — salvati 3 record SostaBo
+2026-04-19 23:30:00 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-19 23:30:00 [INFO] [ciclo 8] 2026-04-19 21:29:59 UTC — salvati 3 record SostaBo
+2026-04-19 23:40:02 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-19 23:40:02 [INFO] [ciclo 9] 2026-04-19 21:40:00 UTC — salvati 3 record SostaBo
+2026-04-19 23:50:03 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-19 23:50:03 [INFO] [ciclo 10] 2026-04-19 21:50:02 UTC — salvati 3 record SostaBo
+2026-04-20 00:00:04 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 00:00:04 [INFO] [ciclo 11] 2026-04-19 22:00:03 UTC — salvati 3 record SostaBo
+2026-04-20 00:10:05 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 00:10:05 [INFO] [ciclo 12] 2026-04-19 22:10:04 UTC — salvati 3 record SostaBo
+2026-04-20 00:20:06 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 00:20:06 [INFO] [ciclo 13] 2026-04-19 22:20:05 UTC — salvati 3 record SostaBo
+2026-04-20 00:30:07 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 00:30:07 [INFO] [ciclo 14] 2026-04-19 22:30:06 UTC — salvati 3 record SostaBo
+2026-04-20 00:40:08 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 00:40:08 [INFO] [ciclo 15] 2026-04-19 22:40:07 UTC — salvati 3 record SostaBo
+2026-04-20 00:50:09 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 00:50:09 [INFO] [ciclo 16] 2026-04-19 22:50:08 UTC — salvati 3 record SostaBo
+2026-04-20 01:00:11 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 01:00:11 [INFO] [ciclo 17] 2026-04-19 23:00:09 UTC — salvati 3 record SostaBo
+2026-04-20 01:10:12 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 01:10:12 [INFO] [ciclo 18] 2026-04-19 23:10:11 UTC — salvati 3 record SostaBo
+2026-04-20 01:20:13 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 01:20:13 [INFO] [ciclo 19] 2026-04-19 23:20:12 UTC — salvati 3 record SostaBo
+2026-04-20 01:30:14 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 01:30:14 [INFO] [ciclo 20] 2026-04-19 23:30:13 UTC — salvati 3 record SostaBo
+2026-04-20 01:40:15 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 01:40:15 [INFO] [ciclo 21] 2026-04-19 23:40:14 UTC — salvati 3 record SostaBo
+2026-04-20 01:50:16 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 01:50:16 [INFO] [ciclo 22] 2026-04-19 23:50:15 UTC — salvati 3 record SostaBo
+2026-04-20 02:00:17 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 02:00:17 [INFO] [ciclo 23] 2026-04-20 00:00:16 UTC — salvati 3 record SostaBo
+2026-04-20 02:10:18 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 02:10:18 [INFO] [ciclo 24] 2026-04-20 00:10:17 UTC — salvati 3 record SostaBo
+2026-04-20 02:20:20 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 02:20:20 [INFO] [ciclo 25] 2026-04-20 00:20:18 UTC — salvati 3 record SostaBo
+2026-04-20 02:30:20 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 02:30:21 [INFO] [ciclo 26] 2026-04-20 00:30:20 UTC — salvati 3 record SostaBo
+2026-04-20 02:40:21 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 02:40:21 [INFO] [ciclo 27] 2026-04-20 00:40:21 UTC — salvati 3 record SostaBo
+2026-04-20 02:50:22 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 02:50:22 [INFO] [ciclo 28] 2026-04-20 00:50:21 UTC — salvati 3 record SostaBo
+2026-04-20 03:00:23 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 03:00:23 [INFO] [ciclo 29] 2026-04-20 01:00:22 UTC — salvati 3 record SostaBo
+2026-04-20 03:10:24 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 03:10:24 [INFO] [ciclo 30] 2026-04-20 01:10:23 UTC — salvati 3 record SostaBo
+2026-04-20 03:20:25 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 03:20:25 [INFO] [ciclo 31] 2026-04-20 01:20:24 UTC — salvati 3 record SostaBo
+2026-04-20 03:30:27 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 03:30:27 [INFO] [ciclo 32] 2026-04-20 01:30:25 UTC — salvati 3 record SostaBo
+2026-04-20 03:40:28 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 03:40:28 [INFO] [ciclo 33] 2026-04-20 01:40:27 UTC — salvati 3 record SostaBo
+2026-04-20 03:50:29 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 03:50:30 [INFO] [ciclo 34] 2026-04-20 01:50:28 UTC — salvati 3 record SostaBo
+2026-04-20 04:00:30 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 04:00:30 [INFO] [ciclo 35] 2026-04-20 02:00:30 UTC — salvati 3 record SostaBo
+2026-04-20 04:10:31 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 04:10:31 [INFO] [ciclo 36] 2026-04-20 02:10:30 UTC — salvati 3 record SostaBo
+2026-04-20 04:20:32 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 04:20:32 [INFO] [ciclo 37] 2026-04-20 02:20:31 UTC — salvati 3 record SostaBo
+2026-04-20 04:30:33 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 04:30:33 [INFO] [ciclo 38] 2026-04-20 02:30:32 UTC — salvati 3 record SostaBo
+2026-04-20 04:40:34 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 04:40:34 [INFO] [ciclo 39] 2026-04-20 02:40:33 UTC — salvati 3 record SostaBo
+2026-04-20 04:50:35 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 04:50:35 [INFO] [ciclo 40] 2026-04-20 02:50:34 UTC — salvati 3 record SostaBo
+2026-04-20 05:00:36 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 05:00:36 [INFO] [ciclo 41] 2026-04-20 03:00:35 UTC — salvati 3 record SostaBo
+2026-04-20 05:10:37 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 05:10:37 [INFO] [ciclo 42] 2026-04-20 03:10:36 UTC — salvati 3 record SostaBo
+2026-04-20 05:20:38 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 05:20:38 [INFO] [ciclo 43] 2026-04-20 03:20:37 UTC — salvati 3 record SostaBo
+2026-04-20 05:30:39 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 05:30:39 [INFO] [ciclo 44] 2026-04-20 03:30:38 UTC — salvati 3 record SostaBo
+2026-04-20 05:40:40 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 05:40:40 [INFO] [ciclo 45] 2026-04-20 03:40:39 UTC — salvati 3 record SostaBo
+2026-04-20 05:50:41 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 05:50:41 [INFO] [ciclo 46] 2026-04-20 03:50:40 UTC — salvati 3 record SostaBo
+2026-04-20 06:00:42 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 06:00:42 [INFO] [ciclo 47] 2026-04-20 04:00:41 UTC — salvati 3 record SostaBo
+2026-04-20 06:10:44 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 06:10:44 [INFO] [ciclo 48] 2026-04-20 04:10:43 UTC — salvati 3 record SostaBo
+2026-04-20 06:20:45 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 06:20:45 [INFO] [ciclo 49] 2026-04-20 04:20:44 UTC — salvati 3 record SostaBo
+2026-04-20 06:30:46 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 06:30:46 [INFO] [ciclo 50] 2026-04-20 04:30:45 UTC — salvati 3 record SostaBo
+2026-04-20 06:40:46 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 06:40:46 [INFO] [ciclo 51] 2026-04-20 04:40:46 UTC — salvati 3 record SostaBo
+2026-04-20 06:50:48 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 06:50:48 [INFO] [ciclo 52] 2026-04-20 04:50:46 UTC — salvati 3 record SostaBo
+2026-04-20 07:00:49 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 07:00:49 [INFO] [ciclo 53] 2026-04-20 05:00:48 UTC — salvati 3 record SostaBo
+2026-04-20 07:10:49 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 07:10:49 [INFO] [ciclo 54] 2026-04-20 05:10:49 UTC — salvati 3 record SostaBo
+2026-04-20 07:20:51 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 07:20:51 [INFO] [ciclo 55] 2026-04-20 05:20:50 UTC — salvati 3 record SostaBo
+2026-04-20 07:30:51 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 07:30:51 [INFO] [ciclo 56] 2026-04-20 05:30:51 UTC — salvati 3 record SostaBo
+2026-04-20 07:40:52 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 07:40:52 [INFO] [ciclo 57] 2026-04-20 05:40:51 UTC — salvati 3 record SostaBo
+2026-04-20 07:50:53 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 07:50:53 [INFO] [ciclo 58] 2026-04-20 05:50:52 UTC — salvati 3 record SostaBo
+2026-04-20 08:00:54 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 08:00:54 [INFO] [ciclo 59] 2026-04-20 06:00:53 UTC — salvati 3 record SostaBo
+2026-04-20 08:10:54 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 08:10:54 [INFO] [ciclo 60] 2026-04-20 06:10:54 UTC — salvati 3 record SostaBo
+2026-04-20 08:20:55 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 08:20:55 [INFO] [ciclo 61] 2026-04-20 06:20:54 UTC — salvati 3 record SostaBo
+2026-04-20 08:30:56 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 08:30:56 [INFO] [ciclo 62] 2026-04-20 06:30:55 UTC — salvati 3 record SostaBo
+2026-04-20 08:40:56 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 08:40:56 [INFO] [ciclo 63] 2026-04-20 06:40:56 UTC — salvati 3 record SostaBo
+2026-04-20 08:50:57 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 08:50:57 [INFO] [ciclo 64] 2026-04-20 06:50:56 UTC — salvati 3 record SostaBo
+2026-04-20 09:00:58 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 09:00:58 [INFO] [ciclo 65] 2026-04-20 07:00:57 UTC — salvati 3 record SostaBo
+2026-04-20 09:10:59 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 09:10:59 [INFO] [ciclo 66] 2026-04-20 07:10:58 UTC — salvati 3 record SostaBo
+2026-04-20 09:20:59 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 09:20:59 [INFO] [ciclo 67] 2026-04-20 07:20:59 UTC — salvati 3 record SostaBo
+2026-04-20 09:31:00 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 09:31:00 [INFO] [ciclo 68] 2026-04-20 07:30:59 UTC — salvati 3 record SostaBo
+2026-04-20 09:41:01 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 09:41:01 [INFO] [ciclo 69] 2026-04-20 07:41:00 UTC — salvati 2 record SostaBo
+2026-04-20 09:51:01 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 09:51:01 [INFO] [ciclo 70] 2026-04-20 07:51:01 UTC — salvati 3 record SostaBo
+2026-04-20 10:01:03 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 10:01:03 [INFO] [ciclo 71] 2026-04-20 08:01:01 UTC — salvati 2 record SostaBo
+2026-04-20 10:11:03 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 10:11:03 [INFO] [ciclo 72] 2026-04-20 08:11:03 UTC — salvati 2 record SostaBo
+2026-04-20 10:21:04 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 10:21:04 [INFO] [ciclo 73] 2026-04-20 08:21:03 UTC — salvati 2 record SostaBo
+2026-04-20 10:31:05 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 10:31:05 [INFO] [ciclo 74] 2026-04-20 08:31:04 UTC — salvati 3 record SostaBo
+2026-04-20 10:41:05 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 10:41:05 [INFO] [ciclo 75] 2026-04-20 08:41:05 UTC — salvati 3 record SostaBo
+2026-04-20 10:51:06 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 10:51:06 [INFO] [ciclo 76] 2026-04-20 08:51:05 UTC — salvati 3 record SostaBo
+2026-04-20 11:01:07 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 11:01:07 [INFO] [ciclo 77] 2026-04-20 09:01:06 UTC — salvati 3 record SostaBo
+2026-04-20 11:11:07 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 11:11:07 [INFO] [ciclo 78] 2026-04-20 09:11:07 UTC — salvati 3 record SostaBo
+2026-04-20 11:21:08 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 11:21:08 [INFO] [ciclo 79] 2026-04-20 09:21:07 UTC — salvati 3 record SostaBo
+2026-04-20 11:31:09 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 11:31:09 [INFO] [ciclo 80] 2026-04-20 09:31:08 UTC — salvati 3 record SostaBo
+2026-04-20 11:41:09 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 11:41:09 [INFO] [ciclo 81] 2026-04-20 09:41:09 UTC — salvati 3 record SostaBo
+2026-04-20 11:51:10 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 11:51:10 [INFO] [ciclo 82] 2026-04-20 09:51:09 UTC — salvati 3 record SostaBo
+2026-04-20 12:01:11 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 12:01:11 [INFO] [ciclo 83] 2026-04-20 10:01:10 UTC — salvati 3 record SostaBo
+2026-04-20 12:11:11 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 12:11:12 [INFO] [ciclo 84] 2026-04-20 10:11:11 UTC — salvati 3 record SostaBo
+2026-04-20 12:21:12 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 12:21:12 [INFO] [ciclo 85] 2026-04-20 10:21:12 UTC — salvati 3 record SostaBo
+2026-04-20 12:31:13 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 12:31:13 [INFO] [ciclo 86] 2026-04-20 10:31:12 UTC — salvati 3 record SostaBo
+2026-04-20 12:41:13 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 12:41:13 [INFO] [ciclo 87] 2026-04-20 10:41:13 UTC — salvati 3 record SostaBo
+2026-04-20 12:51:26 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 12:51:26 [INFO] [ciclo 88] 2026-04-20 10:51:13 UTC — salvati 3 record SostaBo
+2026-04-20 13:01:27 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 13:01:27 [INFO] [ciclo 89] 2026-04-20 11:01:26 UTC — salvati 3 record SostaBo
+2026-04-20 13:11:27 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 13:11:27 [INFO] [ciclo 90] 2026-04-20 11:11:27 UTC — salvati 3 record SostaBo
+2026-04-20 13:21:28 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 13:21:28 [INFO] [ciclo 91] 2026-04-20 11:21:27 UTC — salvati 3 record SostaBo
+2026-04-20 13:31:28 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 13:31:28 [INFO] [ciclo 92] 2026-04-20 11:31:28 UTC — salvati 3 record SostaBo
+2026-04-20 13:41:29 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 13:41:29 [INFO] [ciclo 93] 2026-04-20 11:41:28 UTC — salvati 3 record SostaBo
+2026-04-20 13:51:29 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 13:51:29 [INFO] [ciclo 94] 2026-04-20 11:51:29 UTC — salvati 3 record SostaBo
+2026-04-20 14:01:30 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 14:01:30 [INFO] [ciclo 95] 2026-04-20 12:01:30 UTC — salvati 3 record SostaBo
+2026-04-20 14:11:31 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 14:11:31 [INFO] [ciclo 96] 2026-04-20 12:11:30 UTC — salvati 3 record SostaBo
+2026-04-20 14:21:31 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 14:21:31 [INFO] [ciclo 97] 2026-04-20 12:21:31 UTC — salvati 3 record SostaBo
+2026-04-20 14:31:32 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 14:31:32 [INFO] [ciclo 98] 2026-04-20 12:31:31 UTC — salvati 3 record SostaBo
+2026-04-20 14:41:33 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 14:41:33 [INFO] [ciclo 99] 2026-04-20 12:41:32 UTC — salvati 3 record SostaBo
+2026-04-20 14:51:33 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 14:51:33 [INFO] [ciclo 100] 2026-04-20 12:51:33 UTC — salvati 3 record SostaBo
+2026-04-20 15:01:34 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 15:01:34 [INFO] [ciclo 101] 2026-04-20 13:01:33 UTC — salvati 3 record SostaBo
+2026-04-20 15:11:35 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 15:11:35 [INFO] [ciclo 102] 2026-04-20 13:11:34 UTC — salvati 3 record SostaBo
+2026-04-20 15:21:35 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 15:21:35 [INFO] [ciclo 103] 2026-04-20 13:21:35 UTC — salvati 3 record SostaBo
+2026-04-20 15:31:36 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 15:31:36 [INFO] [ciclo 104] 2026-04-20 13:31:35 UTC — salvati 3 record SostaBo
+2026-04-20 15:41:37 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 15:41:37 [INFO] [ciclo 105] 2026-04-20 13:41:36 UTC — salvati 3 record SostaBo
+2026-04-20 15:51:37 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 15:51:37 [INFO] [ciclo 106] 2026-04-20 13:51:37 UTC — salvati 3 record SostaBo
+2026-04-20 16:01:38 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 16:01:38 [INFO] [ciclo 107] 2026-04-20 14:01:37 UTC — salvati 3 record SostaBo
+2026-04-20 16:11:39 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 16:11:39 [INFO] [ciclo 108] 2026-04-20 14:11:38 UTC — salvati 3 record SostaBo
+2026-04-20 16:21:40 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 16:21:40 [INFO] [ciclo 109] 2026-04-20 14:21:39 UTC — salvati 3 record SostaBo
+2026-04-20 16:31:40 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 16:31:40 [INFO] [ciclo 110] 2026-04-20 14:31:40 UTC — salvati 3 record SostaBo
+2026-04-20 16:41:41 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 16:41:41 [INFO] [ciclo 111] 2026-04-20 14:41:40 UTC — salvati 3 record SostaBo
+2026-04-20 16:51:42 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 16:51:42 [INFO] [ciclo 112] 2026-04-20 14:51:41 UTC — salvati 3 record SostaBo
+2026-04-20 17:01:42 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 17:01:42 [INFO] [ciclo 113] 2026-04-20 15:01:42 UTC — salvati 3 record SostaBo
+2026-04-20 17:11:43 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 17:11:43 [INFO] [ciclo 114] 2026-04-20 15:11:42 UTC — salvati 3 record SostaBo
+2026-04-20 17:21:44 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 17:21:44 [INFO] [ciclo 115] 2026-04-20 15:21:43 UTC — salvati 3 record SostaBo
+2026-04-20 17:31:44 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 17:31:44 [INFO] [ciclo 116] 2026-04-20 15:31:44 UTC — salvati 3 record SostaBo
+2026-04-20 17:41:45 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 17:41:45 [INFO] [ciclo 117] 2026-04-20 15:41:44 UTC — salvati 3 record SostaBo
+2026-04-20 17:51:46 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 17:51:46 [INFO] [ciclo 118] 2026-04-20 15:51:45 UTC — salvati 3 record SostaBo
+2026-04-20 18:01:46 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 18:01:46 [INFO] [ciclo 119] 2026-04-20 16:01:46 UTC — salvati 3 record SostaBo
+2026-04-20 18:11:47 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 18:11:47 [INFO] [ciclo 120] 2026-04-20 16:11:46 UTC — salvati 3 record SostaBo
+2026-04-20 18:21:48 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 18:21:48 [INFO] [ciclo 121] 2026-04-20 16:21:47 UTC — salvati 3 record SostaBo
+2026-04-20 18:31:49 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 18:31:49 [INFO] [ciclo 122] 2026-04-20 16:31:48 UTC — salvati 3 record SostaBo
+2026-04-20 18:41:50 [INFO] HTTP Request: GET https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100&order_by=parcheggio "HTTP/1.1 200 OK"
+2026-04-20 18:41:50 [INFO] [ciclo 123] 2026-04-20 16:41:49 UTC — salvati 3 record SostaBo

@@ -13,7 +13,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from sostabo import SostaBoClient, ParcheggioDisponibilita, ParcheggioStruttura, ParcheggioZona
+from sostabo import SostaBoClient, ParcheggioDisponibilita, ParcheggioStruttura, ParcheggioZona, get_static_parcheggi
 from historical_data import (
     init_db,
     save_readings,
@@ -160,6 +160,19 @@ async def strutture(limit: int = Query(default=100, ge=1, le=500)):
             return await client.get_strutture(limit=limit)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Errore upstream SostaBo: {exc}")
+
+
+@app.get(
+    "/parcheggi/statici",
+    response_model=list[ParcheggioDisponibilita],
+    tags=["Parcheggi"],
+)
+async def parcheggi_statici():
+    """
+    Restituisce i 10 grandi parcheggi/scambiatori con occupazione stimata per fascia oraria.
+    Nessuna chiamata a SostaBo — dati sempre disponibili.
+    """
+    return get_static_parcheggi()
 
 
 @app.get("/parcheggi/storico", tags=["Storico"])

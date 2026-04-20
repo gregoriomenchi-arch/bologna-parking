@@ -266,11 +266,59 @@
     } catch (_) { /* backend opzionale */ }
   }
 
-  // ── Scambiatori (cerchi) ──────────────────────────────────────────────
+  // ── Helper render marker (riusato per live e statici) ────────────────
+  function _addMarker(p, isStatic) {
+    const lat     = p.coordinate?.lat ?? p.lat;
+    const lon     = p.coordinate?.lon ?? p.lon;
+    const nome    = p.nome ?? p.name ?? "Parcheggio";
+    const totale  = p.posti_totali   ?? 0;
+    const occupati= p.posti_occupati ?? (totale - (p.posti_liberi ?? 0));
+    const liberi  = p.posti_liberi   ?? (totale - occupati);
+    if (lat == null || lon == null) return null;
+
+    const color = colorByOccupancy(occupati, totale);
+    const badge = labelByOccupancy(occupati, totale);
+    const size  = isStatic ? 18 : 22;   // cerchio leggermente più piccolo per statici
+    const nota  = isStatic
+      ? `<br><em style="font-size:.7rem;color:#aaa">Stima oraria — non in tempo reale</em>`
+      : "";
+
+    const icon = L.divIcon({
+      className: "",
+      html: `<div class="marker-dot" style="width:${size}px;height:${size}px;background:${color}${isStatic ? ";border-style:dashed" : ""}"></div>`,
+      iconSize: [size, size], iconAnchor: [size/2, size/2], popupAnchor: [0, -size],
+    });
+
+    L.marker([lat, lon], { icon })
+      .bindPopup(`
+        <div class="popup-name">${nome}</div>
+        <div class="popup-row">
+          Posti liberi: <strong>${liberi}</strong> / ${totale}<br>
+          Occupazione: <strong>${totale ? Math.round(occupati / totale * 100) : "—"}%</strong>
+          ${nota}
+        </div>
+        <span class="popup-badge" style="background:${badge.bg}">${badge.text}</span>
+      `)
+      .addTo(markersLayer);
+    return [lat, lon];
+  }
+
+  // ── Scambiatori live SostaBo ───────────────────────────────────────────
   async function caricaParcheggi() {
-    const statusEl  = document.getElementById("status");
+    const statusEl    = document.getElementById("status");
     const errorBanner = document.getElementById("error-banner");
     errorBanner.style.display = "none";
+
+    // Carica sempre i parcheggi statici (non dipendono dal backend live)
+    try {
+      const resS = await fetch("http://localhost:8000/parcheggi/statici",
+                               { signal: AbortSignal.timeout(4000) });
+      if (resS.ok) {
+        const staticList = await resS.json();
+        // Non pulire il layer qui — verrà pulito insieme ai live sotto
+        staticList.forEach(p => _addMarker(p, true));
+      }
+    } catch (_) { /* backend opzionale */ }
 
     try {
       const res = await fetch("http://localhost:8000/parcheggi/disponibilita");
@@ -285,37 +333,19 @@
       markersLayer.clearLayers();
       const bounds = [];
 
+      // Prima aggiungi statici (così i live sono sopra)
+      try {
+        const resS2 = await fetch("http://localhost:8000/parcheggi/statici",
+                                  { signal: AbortSignal.timeout(4000) });
+        if (resS2.ok) {
+          const sl = await resS2.json();
+          sl.forEach(p => { const b = _addMarker(p, true); if (b) bounds.push(b); });
+        }
+      } catch (_) {}
+
       lista.forEach(p => {
-        const lat     = p.coordinate?.lat ?? p.lat ?? p.latitude;
-        const lon     = p.coordinate?.lon ?? p.lon ?? p.lng ?? p.longitude;
-        const nome    = p.nome ?? p.name ?? "Parcheggio";
-        const totale  = p.posti_totali   ?? p.total    ?? p.capacity ?? 0;
-        const occupati= p.posti_occupati ?? p.occupati ?? p.occupied ?? (totale - (p.posti_liberi ?? 0));
-        const liberi  = p.posti_liberi   ?? p.free     ?? (totale - occupati);
-
-        console.log(`  ${nome}: lat=${lat} lon=${lon} liberi=${liberi}/${totale}`);
-        if (lat == null || lon == null) return;
-
-        const color = colorByOccupancy(occupati, totale);
-        const badge = labelByOccupancy(occupati, totale);
-
-        const icon = L.divIcon({
-          className: "",
-          html: `<div class="marker-dot" style="width:22px;height:22px;background:${color}"></div>`,
-          iconSize: [22, 22], iconAnchor: [11, 11], popupAnchor: [0, -14],
-        });
-
-        L.marker([lat, lon], { icon })
-          .bindPopup(`
-            <div class="popup-name">${nome}</div>
-            <div class="popup-row">
-              Posti liberi: <strong>${liberi}</strong> / ${totale}<br>
-              Occupazione: <strong>${totale ? Math.round(occupati / totale * 100) : "—"}%</strong>
-            </div>
-            <span class="popup-badge" style="background:${badge.bg}">${badge.text}</span>
-          `)
-          .addTo(markersLayer);
-        bounds.push([lat, lon]);
+        const b = _addMarker(p, false);
+        if (b) bounds.push(b);
       });
 
       if (firstLoad && bounds.length > 0) {
@@ -323,7 +353,7 @@
         firstLoad = false;
       }
 
-      statusEl.textContent = `${lista.length} scambiatori — ${new Date().toLocaleTimeString("it-IT")}`;
+      statusEl.textContent = `${lista.length} live + 10 stimati — ${new Date().toLocaleTimeString("it-IT")}`;
 
     } catch (err) {
       console.error("[Bologna Parking] fetch fallita:", err);
@@ -339,26 +369,10 @@
         { nome: "Parcheggio Malpighi",         lat: 44.4960, lon: 11.3390, posti_totali: 60,  posti_occupati: 10  },
         { nome: "Parcheggio Via A. Saffi",     lat: 44.4945, lon: 11.3310, posti_totali: 90,  posti_occupati: 72  },
       ];
-      demo.forEach(p => {
-        const color = colorByOccupancy(p.posti_occupati, p.posti_totali);
-        const badge = labelByOccupancy(p.posti_occupati, p.posti_totali);
-        const liberi = p.posti_totali - p.posti_occupati;
-        const icon = L.divIcon({
-          className: "",
-          html: `<div class="marker-dot" style="width:22px;height:22px;background:${color}"></div>`,
-          iconSize: [22, 22], iconAnchor: [11, 11], popupAnchor: [0, -14],
-        });
-        L.marker([p.lat, p.lon], { icon })
-          .addTo(markersLayer)
-          .bindPopup(`
-            <div class="popup-name">${p.nome} <em style="font-size:.7rem;color:#aaa">(demo)</em></div>
-            <div class="popup-row">
-              Posti liberi: <strong>${liberi}</strong> / ${p.posti_totali}<br>
-              Occupazione: <strong>${Math.round(p.posti_occupati / p.posti_totali * 100)}%</strong>
-            </div>
-            <span class="popup-badge" style="background:${badge.bg}">${badge.text}</span>
-          `);
-      });
+      markersLayer.clearLayers();
+      demo.forEach(p => _addMarker({
+        ...p, coordinate: { lat: p.lat, lon: p.lon }, posti_liberi: p.posti_totali - p.posti_occupati,
+      }, false));
       statusEl.textContent = "Demo — backend non raggiungibile";
     }
   }
