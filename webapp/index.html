@@ -135,6 +135,9 @@
 <div id="loading-streets">⏳ Caricamento strade…</div>
 
 <script>
+  // ── Configurazione ────────────────────────────────────────────────────
+  const API = "https://bologna-parking-production.up.railway.app";
+
   // ── Mappa ─────────────────────────────────────────────────────────────
   const map = L.map("map", { center: [44.4938, 11.3427], zoom: 14 });
 
@@ -257,7 +260,7 @@
 
     // 2. Backend live (score aggiornati) — aggiorna silenziosamente se disponibile
     try {
-      const res = await fetch("http://localhost:8000/strade/probabilita",
+      const res = await fetch("${API}/strade/probabilita",
                               { signal: AbortSignal.timeout(5000) });
       if (res.ok) {
         const geojson = await res.json();
@@ -311,7 +314,7 @@
 
     // Carica sempre i parcheggi statici (non dipendono dal backend live)
     try {
-      const resS = await fetch("http://localhost:8000/parcheggi/statici",
+      const resS = await fetch("${API}/parcheggi/statici",
                                { signal: AbortSignal.timeout(4000) });
       if (resS.ok) {
         const staticList = await resS.json();
@@ -321,7 +324,7 @@
     } catch (_) { /* backend opzionale */ }
 
     try {
-      const res = await fetch("http://localhost:8000/parcheggi/disponibilita");
+      const res = await fetch("${API}/parcheggi/disponibilita");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
@@ -335,7 +338,7 @@
 
       // Prima aggiungi statici (così i live sono sopra)
       try {
-        const resS2 = await fetch("http://localhost:8000/parcheggi/statici",
+        const resS2 = await fetch("${API}/parcheggi/statici",
                                   { signal: AbortSignal.timeout(4000) });
         if (resS2.ok) {
           const sl = await resS2.json();
@@ -358,7 +361,7 @@
     } catch (err) {
       console.error("[Bologna Parking] fetch fallita:", err);
       statusEl.textContent = "Errore fetch";
-      errorBanner.textContent = `Errore: ${err.message} — backend attivo su localhost:8000?`;
+      errorBanner.textContent = `Errore: ${err.message} — backend: ${API}`;
       errorBanner.style.display = "block";
 
       // Demo fallback
@@ -437,7 +440,7 @@
 
   async function caricaEventi() {
     try {
-      const res = await fetch("http://localhost:8000/eventi/attivi?entro_ore=2",
+      const res = await fetch("${API}/eventi/attivi?entro_ore=2",
                               { signal: AbortSignal.timeout(4000) });
       if (!res.ok) return;
       const eventi = await res.json();
