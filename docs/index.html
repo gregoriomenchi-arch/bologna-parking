@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bologna Parking</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 12px 16px;
+      background: #16213e;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,.4);
+      z-index: 1000;
+    }
+
+    header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: .5px; }
+    #status    { font-size: .75rem; color: #aaa; }
+
+    #map { flex: 1; }
+
+    .legend {
+      background: rgba(22, 33, 62, .92);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: .75rem;
+      line-height: 1.9;
+      box-shadow: 0 2px 8px rgba(0,0,0,.4);
+      color: #eee;
+    }
+
+    .legend-dot {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .legend-line {
+      display: inline-block;
+      width: 28px; height: 4px;
+      border-radius: 2px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .marker-dot {
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.7);
+      box-shadow: 0 2px 6px rgba(0,0,0,.5);
+    }
+
+    .leaflet-popup-content-wrapper {
+      background: #16213e; color: #eee;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.1);
+    }
+    .leaflet-popup-tip { background: #16213e; }
+    .leaflet-popup-content { margin: 10px 14px; }
+
+    .popup-name { font-weight: 700; font-size: .95rem; margin-bottom: 4px; }
+    .popup-row  { font-size: .82rem; color: #ccc; line-height: 1.6; }
+
+    .popup-badge {
+      display: inline-block;
+      padding: 1px 8px; border-radius: 20px;
+      font-size: .75rem; font-weight: 600; margin-top: 6px;
+    }
+
+    #loading-streets {
+      display: none;
+      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+      background: rgba(22,33,62,.95); color: #aaa;
+      padding: 6px 14px; border-radius: 20px; font-size: .75rem;
+      z-index: 9000; box-shadow: 0 2px 8px rgba(0,0,0,.5);
+    }
+
+    #event-banner {
+      display: none;
+      position: fixed; top: 48px; left: 0; right: 0;
+      z-index: 9500;
+    }
+
+    .event-banner-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 16px;
+      font-size: .82rem; line-height: 1.4;
+      border-bottom: 1px solid rgba(0,0,0,.15);
+    }
+    /* arancione vibrante per imminente, tono più scuro per attivo */
+    .event-banner-item.stato-soon   { background: #e65100; color: #fff; }
+    .event-banner-item.stato-active { background: #bf360c; color: #fff; }
+
+    .event-banner-text { flex: 1; }
+    .event-banner-text strong { font-size: .88rem; }
+    .event-banner-close {
+      background: none; border: none; color: rgba(255,255,255,.7);
+      font-size: 1.1rem; cursor: pointer; padding: 0 0 0 12px; line-height: 1;
+    }
+    .event-banner-close:hover { color: #fff; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🅿 Bologna Parking</h1>
+  <span id="status">Caricamento…</span>
+</header>
+
+<div id="error-banner" style="
+  display:none; background:#b71c1c; color:#fff;
+  padding:8px 16px; font-size:.85rem; text-align:center;
+  position:fixed; top:48px; left:0; right:0; z-index:9999;
+"></div>
+
+<div id="event-banner"></div>
+<div id="map"></div>
+<div id="loading-streets">⏳ Caricamento strade…</div>
+
+<script>
+  // ── Configurazione ────────────────────────────────────────────────────
+  const API = "https://bologna-parking-production.up.railway.app";
+
+  // ── Mappa ─────────────────────────────────────────────────────────────
+  const map = L.map("map", { center: [44.4938, 11.3427], zoom: 14 });
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+  }).addTo(map);
+
+  // ── Legenda ───────────────────────────────────────────────────────────
+  const legend = L.control({ position: "bottomright" });
+  legend.onAdd = () => {
+    const div = L.DomUtil.create("div", "legend");
+    div.innerHTML = `
+      <strong>Probabilità parcheggio</strong><br>
+      <span class="legend-line" style="background:#4caf50"></span>alta (&gt;70)<br>
+      <span class="legend-line" style="background:#ffeb3b"></span>media (40–70)<br>
+      <span class="legend-line" style="background:#f44336"></span>bassa (&lt;40)<br>
+      <hr style="border-color:#444;margin:4px 0">
+      <span class="legend-line" style="background:#aaa;height:5px"></span>principale<br>
+      <span class="legend-line" style="background:#aaa;height:2px"></span>secondaria<br>
+      <hr style="border-color:#444;margin:4px 0">
+      <strong>Scambiatori</strong> (cerchio)<br>
+      <span class="legend-dot" style="background:#4caf50"></span>&lt; 50% — libero<br>
+      <span class="legend-dot" style="background:#ff9800"></span>50–80% — medio<br>
+      <span class="legend-dot" style="background:#f44336"></span>&gt; 80% — pieno
+    `;
+    return div;
+  };
+  legend.addTo(map);
+
+  // ── Utility colori ────────────────────────────────────────────────────
+  function scoreToColor(score) {
+    // 0 → rosso (hsl 0°), 100 → verde (hsl 120°)
+    const hue = Math.round(score * 1.2);
+    return `hsl(${hue},80%,42%)`;
+  }
+
+  function colorByOccupancy(occupato, totale) {
+    if (!totale) return "#9e9e9e";
+    const p = occupato / totale;
+    if (p < 0.5) return "#4caf50";
+    if (p < 0.8) return "#ff9800";
+    return "#f44336";
+  }
+
+  function labelByOccupancy(occupato, totale) {
+    if (!totale) return { text: "N/D", bg: "#9e9e9e" };
+    const p = occupato / totale;
+    if (p < 0.5) return { text: "Libero", bg: "#4caf50" };
+    if (p < 0.8) return { text: "Medio",  bg: "#ff9800" };
+    return               { text: "Pieno",  bg: "#f44336" };
+  }
+
+  // ── Layer groups ──────────────────────────────────────────────────────
+  const stradeLayer   = L.layerGroup().addTo(map);  // polyline strade
+  const markersLayer  = L.layerGroup().addTo(map);  // cerchi scambiatori
+  let firstLoad = true;
+
+  // ── Render strade (condiviso tra statico e live) ─────────────────────
+  function renderStrade(geojson, source) {
+    stradeLayer.clearLayers();
+
+    // Score medio per nome strada → segmenti della stessa via hanno stesso colore
+    const nameSum = {}, nameCount = {};
+    for (const f of geojson.features || []) {
+      const n = f.properties.name;
+      const s = f.properties.score ?? 50;
+      if (n) { nameSum[n] = (nameSum[n] || 0) + s; nameCount[n] = (nameCount[n] || 0) + 1; }
+    }
+    const nameScore = {};
+    for (const n in nameSum) nameScore[n] = nameSum[n] / nameCount[n];
+
+    L.geoJSON(geojson, {
+      style: feature => {
+        const n     = feature.properties.name;
+        const score = n && nameScore[n] != null ? nameScore[n] : (feature.properties.score ?? 50);
+        const hw    = feature.properties.highway;
+        const weight = hw === "primary"   ? 6
+                     : hw === "secondary" ? 4
+                     : 2.5;
+        return { color: scoreToColor(score), weight, opacity: 0.85 };
+      },
+      onEachFeature: (feature, layer) => {
+        const p     = feature.properties;
+        const n     = p.name;
+        const score = Math.round(n && nameScore[n] != null ? nameScore[n] : (p.score ?? 50));
+        const color = scoreToColor(score);
+        layer.bindPopup(`
+          <div class="popup-name">${n || "Strada"}</div>
+          <div class="popup-row">
+            Tipo: <strong>${p.highway}</strong><br>
+            Score: <strong>${score}/100</strong>
+            <span class="popup-badge" style="background:${color};color:#fff">
+              ${score >= 70 ? "Alta" : score >= 40 ? "Media" : "Bassa"} probabilità
+            </span>
+          </div>
+        `);
+      },
+    }).addTo(stradeLayer);
+    console.log(`[Bologna Parking] strade (${source}): ${geojson.features?.length}`);
+  }
+
+  // ── Strade colorate ───────────────────────────────────────────────────
+  async function caricaStrade() {
+    const loadingEl = document.getElementById("loading-streets");
+    loadingEl.style.display = "block";
+
+    // 1. File statico locale — istantaneo, funziona senza backend
+    try {
+      const res = await fetch("./strade_bologna.json");
+      if (res.ok) {
+        const geojson = await res.json();
+        renderStrade(geojson, "statico");
+      }
+    } catch (err) {
+      console.warn("[Bologna Parking] file statico non disponibile:", err.message);
+    } finally {
+      loadingEl.style.display = "none";
+    }
+
+    // 2. Backend live (score aggiornati) — aggiorna silenziosamente se disponibile
+    try {
+      const res = await fetch("${API}/strade/probabilita",
+                              { signal: AbortSignal.timeout(5000) });
+      if (res.ok) {
+        const geojson = await res.json();
+        renderStrade(geojson, "live");
+      }
+    } catch (_) { /* backend opzionale */ }
+  }
+
+  // ── Helper render marker (riusato per live e statici) ────────────────
+  function _addMarker(p, isStatic) {
+    const lat     = p.coordinate?.lat ?? p.lat;
+    const lon     = p.coordinate?.lon ?? p.lon;
+    const nome    = p.nome ?? p.name ?? "Parcheggio";
+    const totale  = p.posti_totali   ?? 0;
+    const occupati= p.posti_occupati ?? (totale - (p.posti_liberi ?? 0));
+    const liberi  = p.posti_liberi   ?? (totale - occupati);
+    if (lat == null || lon == null) return null;
+
+    const color = colorByOccupancy(occupati, totale);
+    const badge = labelByOccupancy(occupati, totale);
+    const size  = isStatic ? 18 : 22;   // cerchio leggermente più piccolo per statici
+    const nota  = isStatic
+      ? `<br><em style="font-size:.7rem;color:#aaa">Stima oraria — non in tempo reale</em>`
+      : "";
+
+    const icon = L.divIcon({
+      className: "",
+      html: `<div class="marker-dot" style="width:${size}px;height:${size}px;background:${color}${isStatic ? ";border-style:dashed" : ""}"></div>`,
+      iconSize: [size, size], iconAnchor: [size/2, size/2], popupAnchor: [0, -size],
+    });
+
+    L.marker([lat, lon], { icon })
+      .bindPopup(`
+        <div class="popup-name">${nome}</div>
+        <div class="popup-row">
+          Posti liberi: <strong>${liberi}</strong> / ${totale}<br>
+          Occupazione: <strong>${totale ? Math.round(occupati / totale * 100) : "—"}%</strong>
+          ${nota}
+        </div>
+        <span class="popup-badge" style="background:${badge.bg}">${badge.text}</span>
+      `)
+      .addTo(markersLayer);
+    return [lat, lon];
+  }
+
+  // ── Scambiatori live SostaBo ───────────────────────────────────────────
+  async function caricaParcheggi() {
+    const statusEl    = document.getElementById("status");
+    const errorBanner = document.getElementById("error-banner");
+    errorBanner.style.display = "none";
+
+    // Carica sempre i parcheggi statici (non dipendono dal backend live)
+    try {
+      const resS = await fetch("${API}/parcheggi/statici",
+                               { signal: AbortSignal.timeout(4000) });
+      if (resS.ok) {
+        const staticList = await resS.json();
+        // Non pulire il layer qui — verrà pulito insieme ai live sotto
+        staticList.forEach(p => _addMarker(p, true));
+      }
+    } catch (_) { /* backend opzionale */ }
+
+    try {
+      const res = await fetch("${API}/parcheggi/disponibilita");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      console.log("[Bologna Parking] dati ricevuti:", data);
+
+      const lista = Array.isArray(data) ? data : (data.parcheggi ?? []);
+      if (lista.length === 0) { statusEl.textContent = "Nessun parcheggio"; return; }
+
+      markersLayer.clearLayers();
+      const bounds = [];
+
+      // Prima aggiungi statici (così i live sono sopra)
+      try {
+        const resS2 = await fetch("${API}/parcheggi/statici",
+                                  { signal: AbortSignal.timeout(4000) });
+        if (resS2.ok) {
+          const sl = await resS2.json();
+          sl.forEach(p => { const b = _addMarker(p, true); if (b) bounds.push(b); });
+        }
+      } catch (_) {}
+
+      lista.forEach(p => {
+        const b = _addMarker(p, false);
+        if (b) bounds.push(b);
+      });
+
+      if (firstLoad && bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+        firstLoad = false;
+      }
+
+      statusEl.textContent = `${lista.length} live + 10 stimati — ${new Date().toLocaleTimeString("it-IT")}`;
+
+    } catch (err) {
+      console.error("[Bologna Parking] fetch fallita:", err);
+      statusEl.textContent = "Errore fetch";
+      errorBanner.textContent = `Errore: ${err.message} — backend: ${API}`;
+      errorBanner.style.display = "block";
+
+      // Demo fallback
+      const demo = [
+        { nome: "Parcheggio Saragozza",       lat: 44.4920, lon: 11.3250, posti_totali: 120, posti_occupati: 40  },
+        { nome: "Parcheggio Murri",            lat: 44.4870, lon: 11.3560, posti_totali: 80,  posti_occupati: 65  },
+        { nome: "Parcheggio Sant'Orsola",      lat: 44.4890, lon: 11.3630, posti_totali: 200, posti_occupati: 175 },
+        { nome: "Parcheggio Malpighi",         lat: 44.4960, lon: 11.3390, posti_totali: 60,  posti_occupati: 10  },
+        { nome: "Parcheggio Via A. Saffi",     lat: 44.4945, lon: 11.3310, posti_totali: 90,  posti_occupati: 72  },
+      ];
+      markersLayer.clearLayers();
+      demo.forEach(p => _addMarker({
+        ...p, coordinate: { lat: p.lat, lon: p.lon }, posti_liberi: p.posti_totali - p.posti_occupati,
+      }, false));
+      statusEl.textContent = "Demo — backend non raggiungibile";
+    }
+  }
+
+  // ── Banner eventi ─────────────────────────────────────────────────────
+  const _dismissedEvents = new Set();
+
+  function _formatOra(isoStr) {
+    if (!isoStr) return "";
+    try {
+      return new Date(isoStr).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+    } catch { return ""; }
+  }
+
+  function _isActive(ev) {
+    const now = Date.now();
+    const start = new Date(ev.data_inizio).getTime();
+    const end   = ev.data_fine ? new Date(ev.data_fine).getTime() : start + 2 * 3600_000;
+    return start <= now && now <= end;
+  }
+
+  function renderEventBanner(eventi) {
+    const banner = document.getElementById("event-banner");
+    const visible = eventi.filter(ev => !_dismissedEvents.has(ev.id ?? ev.nome));
+    if (!visible.length) { banner.style.display = "none"; return; }
+
+    banner.innerHTML = visible.map(ev => {
+      const active  = _isActive(ev);
+      const ora     = _formatOra(ev.data_inizio);
+      const statoClass = active ? "stato-active" : "stato-soon";
+      // Formato: "Partita Bologna FC alle 20:45 — zona Dall'Ara: parcheggio difficile"
+      const quando  = active ? "in corso" : `alle ${ora}`;
+      const zona    = VENUE_ZONE[ev.venue] ?? ev.venue;
+      const diff    = ev.impatto === "alto" ? "parcheggio difficile" : "traffico intenso";
+      const key     = ev.id ?? ev.nome;
+      return `
+        <div class="event-banner-item ${statoClass}">
+          <div class="event-banner-text">
+            <strong>${ev.nome}</strong> ${quando} — zona ${zona}: ${diff}
+          </div>
+          <button class="event-banner-close" onclick="_dismissEvent(${JSON.stringify(key)})">✕</button>
+        </div>`;
+    }).join("");
+    banner.style.display = "block";
+  }
+
+  const VENUE_ZONE = {
+    "Stadio Renato Dall'Ara": "Dall'Ara",
+    "Fiera di Bologna":        "Fiera",
+    "Unipol Arena":            "Casalecchio",
+    "Teatro Comunale":         "Centro",
+  };
+
+  window._dismissEvent = function(key) {
+    _dismissedEvents.add(key);
+    const banner = document.getElementById("event-banner");
+    const remaining = banner.querySelectorAll(".event-banner-item").length - 1;
+    if (remaining <= 0) banner.style.display = "none";
+    else banner.querySelector(`[onclick="_dismissEvent(${JSON.stringify(key)})"]`)
+               ?.closest(".event-banner-item")?.remove();
+  };
+
+  async function caricaEventi() {
+    try {
+      const res = await fetch("${API}/eventi/attivi?entro_ore=2",
+                              { signal: AbortSignal.timeout(4000) });
+      if (!res.ok) return;
+      const eventi = await res.json();
+      if (Array.isArray(eventi) && eventi.length) {
+        renderEventBanner(eventi);
+      }
+    } catch (_) { /* backend opzionale */ }
+  }
+
+  // ── Avvio ─────────────────────────────────────────────────────────────
+  caricaStrade();
+  caricaParcheggi();
+  caricaEventi();
+
+  // Strade ogni 5 minuti (score cambia con i dati live)
+  setInterval(caricaStrade,   5 * 60 * 1000);
+  // Scambiatori ogni 60 secondi
+  setInterval(caricaParcheggi, 60_000);
+  // Banner eventi ogni 5 minuti
+  setInterval(caricaEventi, 5 * 60 * 1000);
+</script>
+</body>
+</html>
