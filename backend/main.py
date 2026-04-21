@@ -5,6 +5,7 @@ Bologna Parking API — Backend FastAPI
 import asyncio
 import json
 import logging
+import logging.config
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,7 +27,19 @@ from eventi import (
     get_upcoming_events,
     get_active_and_soon,
 )
+from traffic_collector import (
+    init_traffic_db,
+    collect_traffic,
+    get_storico_traffico,
+    get_correlazioni_eventi,
+    TOMTOM_KEY,
+)
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 log = logging.getLogger("bologna_parking")
 
 STATIC_STREETS = Path(__file__).parent / "data" / "strade_bologna.json"
@@ -38,22 +51,59 @@ STATIC_STREETS = Path(__file__).parent / "data" / "strade_bologna.json"
 _streets_geojson: dict | None = None   # GeoJSON base caricato da file statico
 _streets_ready = False
 
+# Stato scheduler — visibile in /health
+_sched_cycle:        int = 0
+_sched_total_saved:  int = 0
+_sched_last_run:     datetime | None = None
+_sched_last_count:   int = 0
+_sched_last_error:   str | None = None
+
+COLLECT_INTERVAL = 600  # 10 minuti
+
 
 # ---------------------------------------------------------------------------
-# Background tasks
+# Background task raccolta dati
 # ---------------------------------------------------------------------------
 
 async def _collect_loop() -> None:
-    """Raccoglie dati SostaBo ogni 10 minuti e li salva in SQLite."""
+    """Raccoglie dati SostaBo ogni 10 minuti e li salva nel DB."""
+    global _sched_cycle, _sched_total_saved, _sched_last_run, _sched_last_count, _sched_last_error
+
+    log.info("Scheduler avviato — intervallo %d s", COLLECT_INTERVAL)
+
     while True:
+        _sched_cycle += 1
+        ts = datetime.now(timezone.utc)
+        ts_str = ts.strftime("%Y-%m-%d %H:%M:%S UTC")
         try:
+            # SostaBo — dati parcheggi
             async with SostaBoClient() as client:
                 parcheggi = await client.get_disponibilita()
             save_readings(parcheggi)
-            log.info("Raccolti %d record SostaBo", len(parcheggi))
+            n = len(parcheggi)
+            _sched_total_saved += n
+            _sched_last_count  = n
+            _sched_last_run    = ts
+            _sched_last_error  = None
+            log.info(
+                "[scheduler ciclo %d] %s — parcheggi: %d record (totale: %d)",
+                _sched_cycle, ts_str, n, _sched_total_saved,
+            )
+
+            # TomTom — dati traffico (non blocca se TOMTOM_KEY assente)
+            eventi = get_active_and_soon(within_hours=2)
+            n_traffic = await collect_traffic(eventi)
+            if n_traffic:
+                log.info(
+                    "[scheduler ciclo %d] %s — traffico: %d punti salvati",
+                    _sched_cycle, ts_str, n_traffic,
+                )
+
         except Exception as exc:
-            log.warning("Raccolta SostaBo fallita: %s", exc)
-        await asyncio.sleep(600)
+            _sched_last_error = str(exc)
+            log.warning("[scheduler ciclo %d] raccolta fallita: %s", _sched_cycle, exc)
+
+        await asyncio.sleep(COLLECT_INTERVAL)
 
 
 
@@ -78,8 +128,13 @@ def _load_static_streets() -> None:
 async def lifespan(app: FastAPI):
     init_db()
     init_events_db()
+    init_traffic_db()
     seed_test_events()               # eventi hardcoded per testing immediato
     _load_static_streets()           # sincrono, <50 ms, nessuna chiamata esterna
+    if TOMTOM_KEY:
+        log.info("TomTom API key trovata — raccolta traffico abilitata")
+    else:
+        log.warning("TOMTOM_KEY non impostata — raccolta traffico disabilitata")
     asyncio.create_task(_collect_loop())
     yield
 
@@ -120,6 +175,14 @@ async def health():
         "upstream_sostabo": "reachable" if upstream_ok else "unreachable",
         "streets_ready": _streets_ready,
         "streets_count": len(_streets_geojson["features"]) if _streets_geojson else 0,
+        "scheduler": {
+            "cycles": _sched_cycle,
+            "total_records_saved": _sched_total_saved,
+            "last_run": _sched_last_run.isoformat() if _sched_last_run else None,
+            "last_count": _sched_last_count,
+            "last_error": _sched_last_error,
+            "interval_sec": COLLECT_INTERVAL,
+        },
     }
 
 
@@ -193,6 +256,27 @@ async def eventi_prossimi(ore: int = Query(default=48, ge=1, le=168)):
 async def eventi_attivi(entro_ore: int = Query(default=2, ge=1, le=24)):
     """Restituisce gli eventi attivi ora o che iniziano entro `entro_ore` ore."""
     return get_active_and_soon(within_hours=entro_ore)
+
+
+@app.get("/traffico/storico", tags=["Traffico"])
+async def traffico_storico():
+    """
+    Media velocità e congestione per ogni strada monitorata,
+    per ora del giorno e giorno della settimana.
+    Ritorna lista vuota se TOMTOM_KEY non è configurata.
+    """
+    return get_storico_traffico()
+
+
+@app.get("/correlazioni/eventi", tags=["Traffico"])
+async def correlazioni_eventi():
+    """
+    Impatto medio degli eventi sul traffico nelle zone circostanti,
+    diviso per tipo (partita, fiera, concerto, teatro) e finestra temporale
+    (3h prima, durante, 2h dopo).
+    Ritorna lista vuota finché non ci sono dati storici sufficienti.
+    """
+    return get_correlazioni_eventi()
 
 
 @app.get("/strade/probabilita", tags=["Strade"])
