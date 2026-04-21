@@ -9,12 +9,10 @@ Responsabilità:
 
 import json
 import math
-import sqlite3
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import Optional
 
-DB_PATH = Path(__file__).parent / "parking_history.db"
+from db import connect
 
 # ZTL Bologna — Piazza Maggiore (penalità score per strade vicine)
 _ZTL_LAT = 44.4938
@@ -36,7 +34,7 @@ out geom;"""
 # ---------------------------------------------------------------------------
 
 def init_db() -> None:
-    with sqlite3.connect(DB_PATH) as conn:
+    with connect() as conn:
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS readings (
                 id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,7 +77,7 @@ def save_readings(parcheggi: list) -> None:
         )
         for p in parcheggi
     ]
-    with sqlite3.connect(DB_PATH) as conn:
+    with connect() as conn:
         conn.executemany(
             """INSERT INTO readings
                (timestamp, ora, giorno_settimana, parcheggio_nome,
@@ -95,7 +93,7 @@ def save_readings(parcheggi: list) -> None:
 
 def get_storico() -> list[dict]:
     """Media occupazione per parcheggio/ora/giorno — usato dall'endpoint /storico."""
-    with sqlite3.connect(DB_PATH) as conn:
+    with connect() as conn:
         rows = conn.execute("""
             SELECT parcheggio_nome, ora, giorno_settimana,
                    ROUND(AVG(occupazione_pct), 1) AS avg_occ,
@@ -115,7 +113,7 @@ def get_storico() -> list[dict]:
 def _storico_ora_corrente() -> list[tuple[str, float, float, float]]:
     """Ritorna [(nome, avg_occ, lat, lon)] per l'ora e giorno della settimana correnti."""
     now = datetime.now(timezone.utc)
-    with sqlite3.connect(DB_PATH) as conn:
+    with connect() as conn:
         rows = conn.execute("""
             SELECT parcheggio_nome, AVG(occupazione_pct), AVG(lat), AVG(lon)
             FROM readings
@@ -131,7 +129,7 @@ def _storico_ora_corrente() -> list[tuple[str, float, float, float]]:
 # ---------------------------------------------------------------------------
 
 def load_streets_cache() -> Optional[dict]:
-    with sqlite3.connect(DB_PATH) as conn:
+    with connect() as conn:
         row = conn.execute(
             "SELECT geojson FROM streets_cache ORDER BY id DESC LIMIT 1"
         ).fetchone()
@@ -139,7 +137,7 @@ def load_streets_cache() -> Optional[dict]:
 
 
 def save_streets_cache(geojson: dict) -> None:
-    with sqlite3.connect(DB_PATH) as conn:
+    with connect() as conn:
         conn.execute("DELETE FROM streets_cache")
         conn.execute(
             "INSERT INTO streets_cache (fetched_at, geojson) VALUES (?, ?)",

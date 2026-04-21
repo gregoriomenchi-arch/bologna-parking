@@ -5,16 +5,15 @@ Fase attuale: eventi di test hardcoded, riseminati ad ogni avvio.
 Fase futura:  refresh_eventi() chiamerà gli scraper reali (bolognfc.com, ecc.).
 """
 
-import sqlite3
 import logging
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import Optional
 
 from pydantic import BaseModel
 
+from db import connect
+
 log = logging.getLogger("bologna_parking.eventi")
-DB_PATH = Path(__file__).parent / "parking_history.db"
 
 # ---------------------------------------------------------------------------
 # Venues con coordinate corrette e profilo d'impatto
@@ -66,7 +65,7 @@ class Evento(BaseModel):
 # ---------------------------------------------------------------------------
 
 def init_events_db() -> None:
-    with sqlite3.connect(DB_PATH) as conn:
+    with connect() as conn:
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS eventi (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,7 +87,7 @@ def init_events_db() -> None:
 def _save_events(eventi: list[Evento]) -> None:
     """Inserisce eventi (upsert per nome+venue+data_inizio)."""
     now = datetime.now(timezone.utc).isoformat()
-    with sqlite3.connect(DB_PATH) as conn:
+    with connect() as conn:
         for e in eventi:
             exists = conn.execute(
                 "SELECT 1 FROM eventi WHERE nome=? AND venue=? AND data_inizio=?",
@@ -117,7 +116,7 @@ def get_upcoming_events(hours: int = 48) -> list[dict]:
     """Restituisce gli eventi che iniziano nelle prossime `hours` ore."""
     now   = datetime.now(timezone.utc)
     until = now + timedelta(hours=hours)
-    with sqlite3.connect(DB_PATH) as conn:
+    with connect() as conn:
         rows = conn.execute(
             """SELECT id, nome, venue, data_inizio, data_fine,
                       lat, lon, impatto, raggio_km, fonte
@@ -137,18 +136,20 @@ def get_active_and_soon(within_hours: int = 2) -> list[dict]:
     """
     now    = datetime.now(timezone.utc)
     cutoff = now + timedelta(hours=within_hours)
-    with sqlite3.connect(DB_PATH) as conn:
+    now_s  = now.isoformat()
+    cut_s  = cutoff.isoformat()
+    with connect() as conn:
         rows = conn.execute(
             """
             SELECT id, nome, venue, data_inizio, data_fine,
                    lat, lon, impatto, raggio_km, fonte
             FROM eventi
             WHERE
-              (data_inizio <= :now AND (data_fine IS NULL OR data_fine >= :now))
-              OR (data_inizio > :now AND data_inizio <= :cutoff)
+              (data_inizio <= ? AND (data_fine IS NULL OR data_fine >= ?))
+              OR (data_inizio > ? AND data_inizio <= ?)
             ORDER BY data_inizio
             """,
-            {"now": now.isoformat(), "cutoff": cutoff.isoformat()},
+            (now_s, now_s, now_s, cut_s),
         ).fetchall()
     return [_row_to_dict(r) for r in rows]
 
