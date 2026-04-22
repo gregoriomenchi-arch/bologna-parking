@@ -34,6 +34,11 @@ from traffic_collector import (
     get_correlazioni_eventi,
     TOMTOM_KEY,
 )
+from osm_collector import (
+    init_osm_db,
+    collect_osm_data,
+    get_osm_stats,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -124,11 +129,28 @@ def _load_static_streets() -> None:
 # Lifespan
 # ---------------------------------------------------------------------------
 
+async def _osm_startup_task() -> None:
+    """Raccoglie dati OSM al primo avvio; no-op se i dati esistono già."""
+    try:
+        result = await collect_osm_data(force=False)
+        if result["already_collected"]:
+            log.info("OSM: dati già presenti — skip raccolta")
+        else:
+            log.info(
+                "OSM: raccolta completata — %d strisce, %d strutture, %d ZTL, %d pedonali",
+                result["parking_spots"], result["parking_lots"],
+                result["ztl_zones"], result["pedestrian_areas"],
+            )
+    except Exception as exc:
+        log.error("OSM startup task fallita: %s", exc)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
     init_events_db()
     init_traffic_db()
+    init_osm_db()
     seed_test_events()               # eventi hardcoded per testing immediato
     _load_static_streets()           # sincrono, <50 ms, nessuna chiamata esterna
     if TOMTOM_KEY:
@@ -136,6 +158,7 @@ async def lifespan(app: FastAPI):
     else:
         log.warning("TOMTOM_KEY non impostata — raccolta traffico disabilitata")
     asyncio.create_task(_collect_loop())
+    asyncio.create_task(_osm_startup_task())   # una-tantum, idempotente
     yield
 
 
@@ -256,6 +279,25 @@ async def eventi_prossimi(ore: int = Query(default=48, ge=1, le=168)):
 async def eventi_attivi(entro_ore: int = Query(default=2, ge=1, le=24)):
     """Restituisce gli eventi attivi ora o che iniziano entro `entro_ore` ore."""
     return get_active_and_soon(within_hours=entro_ore)
+
+
+@app.get("/osm/stats", tags=["OSM"])
+async def osm_stats():
+    """
+    Conta i record OSM salvati nel DB per categoria.
+    Mostra anche la data dell'ultima raccolta.
+    """
+    return get_osm_stats()
+
+
+@app.post("/osm/collect", tags=["OSM"])
+async def osm_collect(force: bool = False):
+    """
+    Avvia (o ri-avvia con force=true) la raccolta dati OSM da Overpass.
+    Normalmente non necessario: parte in automatico al primo deploy.
+    """
+    asyncio.create_task(_osm_startup_task() if not force else collect_osm_data(force=True))
+    return {"status": "avviato", "force": force}
 
 
 @app.get("/traffico/storico", tags=["Traffico"])
