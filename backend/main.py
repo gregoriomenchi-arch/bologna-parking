@@ -294,9 +294,10 @@ async def osm_stats():
 async def osm_collect(force: bool = False):
     """
     Avvia (o ri-avvia con force=true) la raccolta dati OSM da Overpass.
+    force=true pulisce i dati esistenti e ri-raccoglie da zero.
     Normalmente non necessario: parte in automatico al primo deploy.
     """
-    asyncio.create_task(_osm_startup_task() if not force else collect_osm_data(force=True))
+    asyncio.create_task(collect_osm_data(force=force))
     return {"status": "avviato", "force": force}
 
 

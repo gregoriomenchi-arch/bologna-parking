@@ -7,12 +7,13 @@ Categorie raccolte:
   - ztl_zones       : zone a traffico limitato con poligoni e orari
   - pedestrian_areas: aree pedonali (impediscono transito veicolare)
 
-Idempotente: non ri-esegue se la tabella osm_collections ha già righe
-(a meno che collect_osm_data sia chiamata con force=True).
+Idempotente: non ri-esegue se parking_spots ha già righe con dati reali.
+Fallback: se Overpass restituisce 0 strisce blu, inserisce dati statici hardcoded.
 """
 
 import json
 import logging
+import traceback
 from datetime import datetime, timezone
 
 import httpx
@@ -25,21 +26,24 @@ OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 BBOX = "44.44,11.27,44.56,11.44"       # intero comune di Bologna
 
 # ---------------------------------------------------------------------------
-# Query Overpass
+# Query Overpass — timeout 60s per query
 # ---------------------------------------------------------------------------
 
-_Q_PARKING_SPOTS = f"""[out:json][timeout:90];
+_Q_PARKING_SPOTS = f"""[out:json][timeout:60];
 (
   node["amenity"="parking"]["fee"="yes"]({BBOX});
   way["amenity"="parking"]["fee"="yes"]({BBOX});
   node["amenity"="parking"]["parking"="street_side"]({BBOX});
   way["amenity"="parking"]["parking"="street_side"]({BBOX});
-  node["parking:lane:both"="parallel"]["parking:lane:both:fee"="yes"]({BBOX});
+  node["parking"="street_side"]["fee"="yes"]({BBOX});
+  way["parking"="street_side"]["fee"="yes"]({BBOX});
+  way["parking:lane:right"="parallel"]["parking:lane:right:fee"="yes"]({BBOX});
+  way["parking:lane:left"="parallel"]["parking:lane:left:fee"="yes"]({BBOX});
   way["parking:lane:both"="parallel"]["parking:lane:both:fee"="yes"]({BBOX});
 );
 out center tags;"""
 
-_Q_PARKING_LOTS = f"""[out:json][timeout:90];
+_Q_PARKING_LOTS = f"""[out:json][timeout:60];
 (
   node["amenity"="parking"]["parking"~"multi-storey|underground"]({BBOX});
   way["amenity"="parking"]["parking"~"multi-storey|underground"]({BBOX});
@@ -48,7 +52,7 @@ _Q_PARKING_LOTS = f"""[out:json][timeout:90];
 );
 out center tags;"""
 
-_Q_ZTL = f"""[out:json][timeout:90];
+_Q_ZTL = f"""[out:json][timeout:60];
 (
   relation["boundary"="restricted_area"]({BBOX});
   way["boundary"="restricted_area"]({BBOX});
@@ -57,7 +61,7 @@ _Q_ZTL = f"""[out:json][timeout:90];
 );
 out geom tags;"""
 
-_Q_PEDESTRIAN = f"""[out:json][timeout:90];
+_Q_PEDESTRIAN = f"""[out:json][timeout:60];
 (
   way["highway"="pedestrian"]["area"="yes"]({BBOX});
   way["highway"="pedestrian"]["area"!="yes"]({BBOX});
@@ -65,6 +69,42 @@ _Q_PEDESTRIAN = f"""[out:json][timeout:90];
   way["foot"="designated"]["motor_vehicle"="no"]["area"="yes"]({BBOX});
 );
 out geom tags;"""
+
+
+# ---------------------------------------------------------------------------
+# Dati statici di fallback — 25 strisce blu reali a Bologna
+# ---------------------------------------------------------------------------
+# Tuple: (nome, via, lat, lon, posti, tariffa, orari, tipo)
+_STATIC_SPOTS: list[tuple] = [
+    ("Strisce blu Via Zamboni",      "Via Zamboni",           44.4970, 11.3559, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Zamboni N",    "Via Zamboni",           44.4978, 11.3571, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Irnerio",      "Via Irnerio",           44.5001, 11.3492, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Irnerio O",    "Via Irnerio",           44.4997, 11.3478, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Saragozza",    "Via Saragozza",         44.4893, 11.3301, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Saragozza E",  "Via Saragozza",         44.4885, 11.3318, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Murri",        "Via Murri",             44.4843, 11.3622, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Murri S",      "Via Murri",             44.4851, 11.3638, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Mazzini",      "Via Giuseppe Mazzini",  44.4935, 11.3445, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Mazzini N",    "Via Giuseppe Mazzini",  44.4928, 11.3461, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Viale Fiera",      "Viale della Fiera",     44.5064, 11.3567, None, "a pagamento", "Lu-Do 7-22", "street_side"),
+    ("Strisce blu Viale Michelino",  "Viale Michelino",       44.5072, 11.3583, None, "a pagamento", "Lu-Do 7-22", "street_side"),
+    ("Strisce blu Via Amendola",     "Via Giovanni Amendola", 44.5049, 11.3430, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Amendola E",   "Via Giovanni Amendola", 44.5039, 11.3418, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Ugo Bassi",    "Via Ugo Bassi",         44.4939, 11.3428, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Rizzoli",      "Via Rizzoli",           44.4947, 11.3412, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Andrea Costa", "Via Andrea Costa",      44.4920, 11.3201, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via A. Costa N",   "Via Andrea Costa",      44.4908, 11.3215, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Massarenti",   "Via Massarenti",        44.4865, 11.3685, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Massarenti N", "Via Massarenti",        44.4871, 11.3671, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Lame",         "Via Lame",              44.5023, 11.3325, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Lame N",       "Via Lame",              44.5031, 11.3341, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Emilia Est",   "Via Emilia Est",        44.4897, 11.3652, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via Emilia Ovest", "Via Emilia Ovest",      44.4958, 11.3151, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+    ("Strisce blu Via San Donato",   "Via San Donato",        44.5038, 11.3612, None, "a pagamento", "Lu-Sa 8-20", "street_side"),
+]
+
+# OSM id fittizio negativo per distinguere i dati statici dai dati OSM reali
+_STATIC_OSM_ID_START = -1000
 
 
 # ---------------------------------------------------------------------------
@@ -140,7 +180,6 @@ def init_osm_db() -> None:
 # ---------------------------------------------------------------------------
 
 def _center(el: dict) -> tuple[float, float] | None:
-    """Ritorna (lat, lon) del centro dell'elemento OSM."""
     if el["type"] == "node":
         lat, lon = el.get("lat"), el.get("lon")
     else:
@@ -156,11 +195,9 @@ def _center(el: dict) -> tuple[float, float] | None:
 
 
 def _geom_json(el: dict) -> str | None:
-    """Ritorna la geometria come stringa JSON [[lon,lat], ...] per ways."""
     geom = el.get("geometry", [])
     if geom:
         return json.dumps([[pt["lon"], pt["lat"]] for pt in geom])
-    # Relations: usa i membri way (semplificato al centroide)
     return None
 
 
@@ -172,22 +209,49 @@ def _cap(tags: dict) -> int | None:
 
 
 # ---------------------------------------------------------------------------
-# Overpass fetch
+# Overpass fetch — con logging dettagliato
 # ---------------------------------------------------------------------------
 
 async def _overpass(client: httpx.AsyncClient, query: str, label: str) -> list[dict]:
+    log.info("Overpass [%s]: invio query (%d chars)…", label, len(query))
     try:
         resp = await client.post(
             OVERPASS_URL,
             data={"data": query},
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
-        resp.raise_for_status()
-        elements = resp.json().get("elements", [])
-        log.info("Overpass [%s]: %d elementi", label, len(elements))
+        log.info(
+            "Overpass [%s]: HTTP %d, content-length=%s",
+            label, resp.status_code, resp.headers.get("content-length", "?"),
+        )
+
+        if resp.status_code != 200:
+            snippet = resp.text[:500] if resp.text else "(vuoto)"
+            log.error("Overpass [%s]: risposta non-200 — body: %s", label, snippet)
+            return []
+
+        try:
+            data = resp.json()
+        except Exception as json_exc:
+            snippet = resp.text[:300] if resp.text else "(vuoto)"
+            log.error("Overpass [%s]: JSON non valido (%s) — body: %s", label, json_exc, snippet)
+            return []
+
+        elements = data.get("elements", [])
+        log.info("Overpass [%s]: %d elementi ricevuti", label, len(elements))
+        remark = data.get("remark", "")
+        if remark:
+            log.warning("Overpass [%s]: remark server — %s", label, remark)
         return elements
+
+    except httpx.TimeoutException as exc:
+        log.error("Overpass [%s]: TIMEOUT — %s", label, exc)
+        return []
+    except httpx.ConnectError as exc:
+        log.error("Overpass [%s]: CONNESSIONE FALLITA — %s", label, exc)
+        return []
     except Exception as exc:
-        log.warning("Overpass [%s] fallita: %s", label, exc)
+        log.error("Overpass [%s]: errore inatteso — %s\n%s", label, exc, traceback.format_exc())
         return []
 
 
@@ -198,42 +262,68 @@ async def _overpass(client: httpx.AsyncClient, query: str, label: str) -> list[d
 async def collect_osm_data(force: bool = False) -> dict:
     """
     Esegue la raccolta OSM e salva nel DB.
-    Se i dati esistono già e force=False, ritorna i conteggi esistenti senza rifare.
+    Skip solo se parking_spots ha già righe (e force=False).
+    Se Overpass restituisce 0 strisce blu, inserisce dati statici di fallback.
     """
-    # Controllo idempotenza
     with connect() as conn:
-        existing = conn.execute(
-            "SELECT parking_spots_count, parking_lots_count, "
-            "ztl_zones_count, pedestrian_areas_count, collected_at "
-            "FROM osm_collections ORDER BY id DESC LIMIT 1"
+        existing_spots = conn.execute("SELECT COUNT(*) FROM parking_spots").fetchone()[0]
+        last_coll = conn.execute(
+            "SELECT collected_at FROM osm_collections ORDER BY id DESC LIMIT 1"
         ).fetchone()
 
-    if existing and not force:
+    if existing_spots > 0 and not force:
         log.info(
-            "Dati OSM già presenti (raccolti il %s) — skip. "
+            "Dati OSM già presenti (%d strisce, raccolti il %s) — skip. "
             "Usa force=True per ri-raccogliere.",
-            existing[4],
+            existing_spots, last_coll[0] if last_coll else "?",
         )
+        with connect() as conn:
+            last = conn.execute(
+                "SELECT parking_spots_count, parking_lots_count, "
+                "ztl_zones_count, pedestrian_areas_count, collected_at "
+                "FROM osm_collections ORDER BY id DESC LIMIT 1"
+            ).fetchone()
         return {
             "already_collected": True,
-            "collected_at": existing[4],
-            "parking_spots": existing[0],
-            "parking_lots": existing[1],
-            "ztl_zones": existing[2],
-            "pedestrian_areas": existing[3],
+            "collected_at": last[4] if last else None,
+            "parking_spots": last[0] if last else existing_spots,
+            "parking_lots":  last[1] if last else 0,
+            "ztl_zones":     last[2] if last else 0,
+            "pedestrian_areas": last[3] if last else 0,
         }
 
-    log.info("Avvio raccolta OSM Bologna (Overpass API)…")
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        spots_els    = await _overpass(client, _Q_PARKING_SPOTS, "parking_spots")
-        lots_els     = await _overpass(client, _Q_PARKING_LOTS,  "parking_lots")
-        ztl_els      = await _overpass(client, _Q_ZTL,           "ztl_zones")
-        ped_els      = await _overpass(client, _Q_PEDESTRIAN,     "pedestrian_areas")
+    if force:
+        log.info("Raccolta OSM forzata — pulizia tabelle esistenti…")
+        with connect() as conn:
+            conn.executescript("""
+                DELETE FROM parking_spots;
+                DELETE FROM parking_lots;
+                DELETE FROM ztl_zones;
+                DELETE FROM pedestrian_areas;
+                DELETE FROM osm_collections
+            """)
+
+    log.info("Avvio raccolta OSM Bologna (Overpass API, timeout=70s per query)…")
+    # 70s client timeout: 60s elaborazione server + 10s margine rete
+    async with httpx.AsyncClient(timeout=70.0) as client:
+        spots_els = await _overpass(client, _Q_PARKING_SPOTS, "parking_spots")
+        lots_els  = await _overpass(client, _Q_PARKING_LOTS,  "parking_lots")
+        ztl_els   = await _overpass(client, _Q_ZTL,           "ztl_zones")
+        ped_els   = await _overpass(client, _Q_PEDESTRIAN,     "pedestrian_areas")
 
     n_spots = _save_parking_spots(spots_els)
     n_lots  = _save_parking_lots(lots_els)
     n_ztl   = _save_ztl_zones(ztl_els)
     n_ped   = _save_pedestrian_areas(ped_els)
+
+    # Fallback: se Overpass non ha restituito strisce blu, usa dati statici
+    if n_spots == 0:
+        log.warning(
+            "Overpass non ha restituito strisce blu — "
+            "inserimento %d spot statici hardcoded per Bologna",
+            len(_STATIC_SPOTS),
+        )
+        n_spots = _save_static_spots()
 
     now = datetime.now(timezone.utc).isoformat()
     with connect() as conn:
@@ -283,7 +373,7 @@ def _save_parking_spots(elements: list[dict]) -> int:
             _cap(tags),
             tags.get("fee:conditional") or ("a pagamento" if tags.get("fee") == "yes" else None),
             tags.get("opening_hours"),
-            tags.get("parking") or tags.get("parking:lane:both"),
+            tags.get("parking") or tags.get("parking:lane:right") or tags.get("parking:lane:both"),
         ))
     if rows:
         with connect() as conn:
@@ -293,6 +383,26 @@ def _save_parking_spots(elements: list[dict]) -> int:
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 rows,
             )
+    return len(rows)
+
+
+def _save_static_spots() -> int:
+    """Inserisce i 25 spot statici hardcoded di Bologna come fallback."""
+    rows = [
+        (
+            _STATIC_OSM_ID_START - i,  # id negativo per distinguerli da OSM reali
+            "static",
+            lat, lon, nome, via, posti, tariffa, orari, tipo,
+        )
+        for i, (nome, via, lat, lon, posti, tariffa, orari, tipo) in enumerate(_STATIC_SPOTS)
+    ]
+    with connect() as conn:
+        conn.executemany(
+            """INSERT INTO parking_spots
+               (osm_id, osm_type, lat, lon, nome, via, posti, tariffa, orari, tipo)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            rows,
+        )
     return len(rows)
 
 
@@ -388,7 +498,6 @@ def _save_pedestrian_areas(elements: list[dict]) -> int:
 # ---------------------------------------------------------------------------
 
 def get_osm_stats() -> dict:
-    """Conta i record per categoria e ritorna l'ultima raccolta."""
     with connect() as conn:
         last = conn.execute(
             "SELECT collected_at, parking_spots_count, parking_lots_count, "
