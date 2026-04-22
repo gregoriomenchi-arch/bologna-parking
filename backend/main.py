@@ -290,7 +290,7 @@ async def osm_stats():
     return get_osm_stats()
 
 
-@app.post("/osm/collect", tags=["OSM"])
+@app.get("/osm/collect", tags=["OSM"])
 async def osm_collect(force: bool = False):
     """
     Avvia (o ri-avvia con force=true) la raccolta dati OSM da Overpass.
