@@ -115,6 +115,25 @@
       font-size: 1.1rem; cursor: pointer; padding: 0 0 0 12px; line-height: 1;
     }
     .event-banner-close:hover { color: #fff; }
+
+    #conditions-banner {
+      display: none;
+      background: #0d2137;
+      border-bottom: 1px solid rgba(255,255,255,.1);
+      padding: 5px 12px;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      font-size: .76rem;
+      flex-shrink: 0;
+    }
+    .cond-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      border-radius: 12px; padding: 2px 9px; white-space: nowrap;
+    }
+    .cond-warn { background: rgba(255,152, 0,.22); color: #ffcc80; }
+    .cond-info { background: rgba(100,181,246,.15); color: #90caf9; }
+    .cond-ztl  { background: rgba(244, 67,54,.2);  color: #ef9a9a; }
   </style>
 </head>
 <body>
@@ -130,6 +149,7 @@
   position:fixed; top:48px; left:0; right:0; z-index:9999;
 "></div>
 
+<div id="conditions-banner"></div>
 <div id="event-banner"></div>
 <div id="map"></div>
 <div id="loading-streets">⏳ Caricamento strade…</div>
@@ -450,10 +470,33 @@
     } catch (_) { /* backend opzionale */ }
   }
 
+  // ── Banner condizioni attive ──────────────────────────────────────────
+  async function aggiornaBannerCondizioni() {
+    try {
+      const res = await fetch(`${API}/condizioni/attive`,
+                              { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) return;
+      const data = await res.json();
+      const banner = document.getElementById("conditions-banner");
+      if (!data.fattori || data.fattori.length === 0) {
+        banner.style.display = "none";
+        return;
+      }
+      banner.innerHTML = data.fattori.map(f => {
+        let cls = "cond-info";
+        if (f.delta_score <= -20) cls = "cond-warn";
+        if (f.codice === "ztl_attiva" || f.codice === "ztl_presto") cls = "cond-ztl";
+        return `<span class="cond-pill ${cls}">${f.emoji} ${f.label}</span>`;
+      }).join("");
+      banner.style.display = "flex";
+    } catch (_) { /* backend opzionale */ }
+  }
+
   // ── Avvio ─────────────────────────────────────────────────────────────
   caricaStrade();
   caricaParcheggi();
   caricaEventi();
+  aggiornaBannerCondizioni();
 
   // Strade ogni 5 minuti (score cambia con i dati live)
   setInterval(caricaStrade,   5 * 60 * 1000);
@@ -461,6 +504,8 @@
   setInterval(caricaParcheggi, 60_000);
   // Banner eventi ogni 5 minuti
   setInterval(caricaEventi, 5 * 60 * 1000);
+  // Condizioni ogni 10 minuti (sincronizzato con cache meteo)
+  setInterval(aggiornaBannerCondizioni, 10 * 60 * 1000);
 </script>
 </body>
 </html>

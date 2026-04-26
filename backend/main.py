@@ -20,6 +20,7 @@ from historical_data import (
     save_readings,
     get_storico,
     compute_street_scores,
+    compute_single_street_score,
 )
 from eventi import (
     init_events_db,
@@ -39,6 +40,9 @@ from osm_collector import (
     collect_osm_data,
     get_osm_stats,
 )
+from weather import get_meteo, meteo_to_dict, OPENWEATHER_KEY
+from unibo import is_giorno_lezioni, is_sessione_esami, get_status as unibo_status
+from ztl import get_status as ztl_status, is_ztl_attiva
 
 logging.basicConfig(
     level=logging.INFO,
@@ -157,6 +161,10 @@ async def lifespan(app: FastAPI):
         log.info("TomTom API key trovata — raccolta traffico abilitata")
     else:
         log.warning("TOMTOM_KEY non impostata — raccolta traffico disabilitata")
+    if OPENWEATHER_KEY:
+        log.info("OpenWeatherMap API key trovata — meteo abilitato")
+    else:
+        log.warning("OPENWEATHER_KEY non impostata — endpoint /meteo restituirà disponibile=false")
     asyncio.create_task(_collect_loop())
     asyncio.create_task(_osm_startup_task())   # una-tantum, idempotente
     yield
@@ -322,14 +330,87 @@ async def correlazioni_eventi():
     return get_correlazioni_eventi()
 
 
-@app.get("/strade/probabilita", tags=["Strade"])
-async def probabilita_strade():
+async def _safe_sostabo() -> list:
+    try:
+        async with SostaBoClient() as client:
+            return await client.get_disponibilita()
+    except Exception:
+        return []
+
+
+@app.get("/meteo/attuale", tags=["Meteo"])
+async def meteo_attuale():
     """
-    GeoJSON con score aggiornati in tempo reale (dati SostaBo + storico SQLite).
-    Carica la geometria dal file statico e ricalcola gli score.
+    Condizioni meteo attuali per Bologna via OpenWeatherMap (cache 10 min).
+    Ritorna disponibile=false se OPENWEATHER_KEY non è configurata.
     """
-    if not _streets_ready or not _streets_geojson or not _streets_geojson["features"]:
+    meteo = await get_meteo()
+    return meteo_to_dict(meteo)
+
+
+@app.get("/ztl/status", tags=["ZTL"])
+async def ztl_status_endpoint():
+    """
+    Stato attuale ZTL Sirio: attiva/non attiva, orario prossima attivazione/disattivazione.
+    """
+    return ztl_status()
+
+
+@app.get("/unibo/status", tags=["UniBo"])
+async def unibo_status_endpoint():
+    """
+    Stato calendario UniBo per oggi: giorno di lezione, sessione esami, pausa estiva.
+    """
+    return unibo_status()
+
+
+@app.get("/condizioni/attive", tags=["Score"])
+async def condizioni_attive():
+    """
+    Aggregato di tutti i fattori che influenzano lo score strade in questo momento.
+    Usato dalla webapp per mostrare il banner informativo.
+    """
+    meteo  = await get_meteo()
+    ztl_st = ztl_status()
+    lezioni = is_giorno_lezioni()
+    esami   = is_sessione_esami()
+
+    fattori = []
+    if meteo and meteo.pioggia:
+        fattori.append({"codice": "pioggia", "label": f"Pioggia ({meteo.pioggia_mm:.1f} mm)", "emoji": "🌧️", "delta_score": -20})
+    if esami:
+        fattori.append({"codice": "esami", "label": "Sessione esami UniBo", "emoji": "📝", "delta_score": -25})
+    elif lezioni:
+        fattori.append({"codice": "lezioni", "label": "Giorno lezioni UniBo", "emoji": "🎓", "delta_score": -15})
+    if ztl_st["attiva"]:
+        ora_fine = ztl_st.get("prossima_disattivazione", "20:00")
+        fattori.append({"codice": "ztl_attiva", "label": f"ZTL attiva fino {ora_fine}", "emoji": "🚫", "delta_score": 0})
+    elif ztl_st["attiva_tra_30_min"]:
+        ora_att = ztl_st.get("prossima_attivazione", "")
+        fattori.append({"codice": "ztl_presto", "label": f"ZTL tra {ztl_st['minuti_a_attivazione']} min ({ora_att})", "emoji": "⚠️", "delta_score": -10})
+
+    return {
+        "fattori": fattori,
+        "meteo": meteo_to_dict(meteo),
+        "ztl": ztl_st,
+        "unibo": {"giorno_lezioni": lezioni, "sessione_esami": esami},
+    }
+
+
+@app.get("/debug/score/{via}", tags=["Debug"])
+async def debug_score(via: str):
+    """
+    Breakdown dettagliato dello score per una strada (ricerca per nome parziale).
+    Es: /debug/score/Zamboni  →  score + tutti i fattori applicati.
+    """
+    if not _streets_ready or not _streets_geojson:
         raise HTTPException(status_code=503, detail="Strade non disponibili")
+
+    meteo   = await get_meteo()
+    ztl_st  = ztl_status()
+    lezioni = is_giorno_lezioni()
+    esami   = is_sessione_esami()
+    eventi  = get_active_and_soon(within_hours=2)
 
     try:
         async with SostaBoClient() as client:
@@ -337,5 +418,44 @@ async def probabilita_strade():
     except Exception:
         live = []
 
+    result = compute_single_street_score(
+        via, _streets_geojson, live, eventi,
+        pioggia=meteo.pioggia if meteo else False,
+        unibo_lezioni=lezioni,
+        unibo_esami=esami,
+        ztl_attiva_tra_30_min=ztl_st["attiva_tra_30_min"],
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Strada '{via}' non trovata nel GeoJSON")
+    return result
+
+
+@app.get("/strade/probabilita", tags=["Strade"])
+async def probabilita_strade():
+    """
+    GeoJSON con score aggiornati in tempo reale.
+    Integra: SostaBo live, storico DB, meteo, calendario UniBo, ZTL Sirio, eventi.
+    """
+    if not _streets_ready or not _streets_geojson or not _streets_geojson["features"]:
+        raise HTTPException(status_code=503, detail="Strade non disponibili")
+
+    # Fetch parallelo: SostaBo live + meteo (entrambi I/O bound)
+    import asyncio as _asyncio
+    live_task  = _asyncio.create_task(_safe_sostabo())
+    meteo_task = _asyncio.create_task(get_meteo())
+    live, meteo = await _asyncio.gather(live_task, meteo_task)
+
     eventi_attivi = get_active_and_soon(within_hours=2)
-    return compute_street_scores(_streets_geojson, live, [], eventi=eventi_attivi)
+    ztl_st        = ztl_status()
+    lezioni       = is_giorno_lezioni()
+    esami         = is_sessione_esami()
+
+    return compute_street_scores(
+        _streets_geojson, live, [],
+        eventi=eventi_attivi,
+        pioggia=meteo.pioggia if meteo else False,
+        unibo_lezioni=lezioni,
+        unibo_esami=esami,
+        ztl_attiva=ztl_st["attiva"],
+        ztl_attiva_tra_30_min=ztl_st["attiva_tra_30_min"],
+    )
