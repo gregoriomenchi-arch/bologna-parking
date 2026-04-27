@@ -134,6 +134,14 @@
     .cond-warn { background: rgba(255,152, 0,.22); color: #ffcc80; }
     .cond-info { background: rgba(100,181,246,.15); color: #90caf9; }
     .cond-ztl  { background: rgba(244, 67,54,.2);  color: #ef9a9a; }
+
+    @media (max-width: 480px) {
+      header h1 { font-size: .95rem; }
+      #status { display: none; }
+      .legend { font-size: .68rem; padding: 6px 8px; }
+      .popup-name { font-size: .88rem; }
+      .popup-row { font-size: .76rem; }
+    }
   </style>
 </head>
 <body>
@@ -216,9 +224,34 @@
   const markersLayer  = L.layerGroup().addTo(map);  // cerchi scambiatori
   let firstLoad = true;
 
+  // ── Emoji per chiave fattore ─────────────────────────────────────────
+  const FACTOR_EMOJI = {
+    pioggia:           "🌧️",
+    giorno_lezioni:    "🎓",
+    sessione_esami:    "📝",
+    ztl_buffer_presto: "🚫",
+  };
+
+  function _fattoriHtml(fattori) {
+    if (!fattori || typeof fattori !== "object") return "";
+    const rows = Object.entries(fattori)
+      .filter(([k]) => k !== "base")
+      .map(([k, v]) => {
+        const emoji = k.startsWith("evento_") ? "📍"
+                    : (FACTOR_EMOJI[k] || "•");
+        const label = k.startsWith("evento_") ? k.replace("evento_", "") : k.replace(/_/g, " ");
+        const delta = v > 0 ? `+${v}` : `${v}`;
+        return `<div class="popup-row">${emoji} ${label}: <strong>${delta}</strong></div>`;
+      });
+    return rows.length
+      ? `<div style="margin-top:5px;border-top:1px solid rgba(255,255,255,.1);padding-top:4px">${rows.join("")}</div>`
+      : "";
+  }
+
   // ── Render strade (condiviso tra statico e live) ─────────────────────
   function renderStrade(geojson, source) {
     stradeLayer.clearLayers();
+    const srcLabel = source === "live" ? "dati live" : "stima statica";
 
     // Score medio per nome strada → segmenti della stessa via hanno stesso colore
     const nameSum = {}, nameCount = {};
@@ -245,14 +278,19 @@
         const n     = p.name;
         const score = Math.round(n && nameScore[n] != null ? nameScore[n] : (p.score ?? 50));
         const color = scoreToColor(score);
+        const probLabel = score >= 70 ? "Alta" : score >= 40 ? "Media" : "Bassa";
         layer.bindPopup(`
           <div class="popup-name">${n || "Strada"}</div>
           <div class="popup-row">
             Tipo: <strong>${p.highway}</strong><br>
             Score: <strong>${score}/100</strong>
             <span class="popup-badge" style="background:${color};color:#fff">
-              ${score >= 70 ? "Alta" : score >= 40 ? "Media" : "Bassa"} probabilità
+              ${probLabel} probabilità
             </span>
+          </div>
+          ${_fattoriHtml(p.fattori)}
+          <div class="popup-row" style="margin-top:5px;color:#888;font-size:.7rem">
+            Fonte: ${srcLabel}
           </div>
         `);
       },
