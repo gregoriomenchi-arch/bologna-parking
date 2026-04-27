@@ -414,8 +414,9 @@ def compute_single_street_score(
     query_low = name_query.lower().strip()
     match = None
     for feat in streets_geojson.get("features", []):
-        nome = feat["properties"].get("name", "").lower()
-        if query_low in nome or all(w in nome for w in query_low.split()):
+        nome = feat["properties"].get("name", "")
+        nome_low = nome.lower()
+        if query_low in nome_low or all(w in nome_low for w in query_low.split()):
             match = feat
             break
     if match is None:
