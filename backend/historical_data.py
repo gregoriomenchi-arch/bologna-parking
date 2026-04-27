@@ -308,6 +308,7 @@ def _compute_score(
     # Eventi attivi nelle vicinanze → -30
     if eventi:
         now = datetime.now(timezone.utc)
+        eventi_applicati: set[str] = set()
         for ev in eventi:
             ev_lat = ev.get("lat")
             ev_lon = ev.get("lon")
@@ -328,6 +329,10 @@ def _compute_score(
                     continue
             except (KeyError, ValueError):
                 continue
+            ev_id = ev.get("id") or f"{ev.get('nome', '')}|{ev.get('data_inizio', '')}"
+            if ev_id in eventi_applicati:
+                continue
+            eventi_applicati.add(ev_id)
             penalty = -30.0 if ev.get("impatto") == "alto" else -18.0
             score += penalty
             factors[f"evento_{ev.get('nome', 'sconosciuto')[:20]}"] = penalty
