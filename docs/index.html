@@ -191,6 +191,11 @@
       <span class="legend-dot" style="background:#4caf50"></span>&lt; 50% — libero<br>
       <span class="legend-dot" style="background:#ff9800"></span>50–80% — medio<br>
       <span class="legend-dot" style="background:#f44336"></span>&gt; 80% — pieno
+      <hr style="border-color:#444;margin:4px 0">
+      <strong>Parcheggi Comune</strong><br>
+      <span style="display:inline-block;width:14px;height:14px;background:#1565c0;border-radius:3px;margin-right:6px;vertical-align:middle"></span>struttura<br>
+      <span style="display:inline-block;width:14px;height:14px;background:#2e7d32;border-radius:3px;margin-right:6px;vertical-align:middle"></span>scambiatore<br>
+      <span style="display:inline-block;width:14px;height:14px;background:#6a1b9a;border-radius:3px;margin-right:6px;vertical-align:middle"></span>raso/altro
     `;
     return div;
   };
@@ -222,6 +227,7 @@
   // ── Layer groups ──────────────────────────────────────────────────────
   const stradeLayer   = L.layerGroup().addTo(map);  // polyline strade
   const markersLayer  = L.layerGroup().addTo(map);  // cerchi scambiatori
+  const comuneLayer   = L.layerGroup().addTo(map);  // parcheggi Comune
   let firstLoad = true;
 
   // ── Emoji per chiave fattore ─────────────────────────────────────────
@@ -377,6 +383,49 @@
       `)
       .addTo(markersLayer);
     return [lat, lon];
+  }
+
+  // ── Parcheggi strutturati Comune di Bologna ───────────────────────────
+  async function caricaParcheggioComune() {
+    try {
+      const res = await fetch(`${API}/parcheggi/comune`,
+                              { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) return;
+      const lista = await res.json();
+      comuneLayer.clearLayers();
+      lista.forEach(p => {
+        const color = p.tipologia === 'struttura' ? '#1565c0'
+                    : p.tipologia === 'scambiatore' ? '#2e7d32'
+                    : '#6a1b9a';
+        const icon = L.divIcon({
+          className: '',
+          html: `<div style="
+            background:${color};color:#fff;
+            width:22px;height:22px;border-radius:4px;
+            display:flex;align-items:center;justify-content:center;
+            font-size:11px;font-weight:700;
+            border:2px solid rgba(255,255,255,0.8);
+            box-shadow:0 2px 4px rgba(0,0,0,0.4);">P</div>`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11],
+          popupAnchor: [0, -14],
+        });
+        L.marker([p.lat, p.lon], { icon })
+          .bindPopup(`
+            <div class="popup-name">${p.nome}</div>
+            <div class="popup-row">
+              Tipo: <strong>${p.tipologia}</strong><br>
+              Posti: <strong>${p.posti ?? 'N/D'}</strong><br>
+              Tariffa: <strong>${p.tariffa}</strong><br>
+              Zona: ${p.zona}
+            </div>
+          `)
+          .addTo(comuneLayer);
+      });
+      console.log(`[Bologna Parking] parcheggi Comune: ${lista.length}`);
+    } catch(e) {
+      console.warn('[Bologna Parking] parcheggi Comune non disponibili:', e);
+    }
   }
 
   // ── Scambiatori live SostaBo ───────────────────────────────────────────
@@ -543,6 +592,7 @@
   // ── Avvio ─────────────────────────────────────────────────────────────
   caricaStrade();
   caricaParcheggi();
+  caricaParcheggioComune();
   caricaEventi();
   aggiornaBannerCondizioni();
   setInterval(caricaStrade, 5 * 60 * 1000);

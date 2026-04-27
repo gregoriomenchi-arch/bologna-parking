@@ -5,6 +5,7 @@ Bologna Parking API — Backend FastAPI
 import asyncio
 import json
 import logging
+import httpx
 import logging.config
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -273,6 +274,41 @@ async def parcheggi_statici():
 @app.get("/parcheggi/storico", tags=["Storico"])
 async def storico():
     return get_storico()
+
+
+@app.get("/parcheggi/comune", tags=["Parcheggi"])
+async def parcheggi_comune():
+    """
+    44 parcheggi strutturati dal dataset ufficiale Comune di Bologna.
+    Include strutture, parcheggi a raso, scambiatori con coordinate precise.
+    """
+    url = (
+        "https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets"
+        "/parcheggi/records?limit=100"
+    )
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            data = resp.json()
+        results = []
+        for r in data.get("results", []):
+            pt = r.get("geo_point_2d", {})
+            lat = pt.get("lat")
+            lon = pt.get("lon")
+            if lat and lon:
+                results.append({
+                    "nome": r.get("name", ""),
+                    "tipologia": r.get("tipologia", ""),
+                    "posti": r.get("posti"),
+                    "tariffa": r.get("tariffa", ""),
+                    "zona": r.get("nomezona", ""),
+                    "lat": lat,
+                    "lon": lon,
+                })
+        return results
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
 
 
 @app.get("/eventi/prossimi", tags=["Eventi"])
