@@ -223,6 +223,7 @@
   const stradeLayer   = L.layerGroup().addTo(map);  // polyline strade
   const markersLayer  = L.layerGroup().addTo(map);  // cerchi scambiatori
   let firstLoad = true;
+  let zoneSostaSet = null; // set di nomi via con strisce blu
 
   // ── Emoji per chiave fattore ─────────────────────────────────────────
   const FACTOR_EMOJI = {
@@ -261,10 +262,17 @@
 
     const geojsonFiltrato = {
       ...geojson,
-      features: (geojson.features || []).filter(f =>
-        !ESCLUDI_HIGHWAY.has(f.properties.highway) &&
-        f.properties.name && f.properties.name.trim() !== ''
-      )
+      features: (geojson.features || []).filter(f => {
+        const hw   = f.properties.highway;
+        const nome = f.properties.name;
+        if (!nome || nome.trim() === '' || ESCLUDI_HIGHWAY.has(hw)) return false;
+        const nomeNorm = nome.toLowerCase().trim();
+        const hasParcheggio = !zoneSostaSet ||
+                              zoneSostaSet.has(nomeNorm) ||
+                              hw === 'primary' ||
+                              hw === 'secondary';
+        return hasParcheggio;
+      })
     };
 
     // Score medio per nome strada → segmenti della stessa via hanno stesso colore
@@ -310,6 +318,25 @@
       },
     }).addTo(stradeLayer);
     console.log(`[Bologna Parking] strade (${source}): ${geojson.features?.length}`);
+  }
+
+  // ── Zone sosta (strisce blu) ──────────────────────────────────────────
+  async function caricaZoneSosta() {
+    try {
+      const res = await fetch(`${API}/osm/zone-sosta`,
+                              { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) return;
+      const data = await res.json();
+      // il backend ritorna {count, sample} — ci serve la lista completa
+      // quindi chiamiamo l'endpoint con full=true
+      const res2 = await fetch(`${API}/osm/zone-sosta?full=true`,
+                               { signal: AbortSignal.timeout(8000) });
+      if (res2.ok) {
+        const data2 = await res2.json();
+        zoneSostaSet = new Set(data2.nomi || []);
+        console.log(`[Bologna Parking] zone sosta caricate: ${zoneSostaSet.size}`);
+      }
+    } catch (_) {}
   }
 
   // ── Strade colorate ───────────────────────────────────────────────────
@@ -540,6 +567,7 @@
   }
 
   // ── Avvio ─────────────────────────────────────────────────────────────
+  caricaZoneSosta();
   caricaStrade();
   caricaParcheggi();
   caricaEventi();

@@ -311,14 +311,15 @@ async def osm_collect(force: bool = False):
 
 
 @app.get("/osm/zone-sosta", tags=["OSM"])
-async def osm_zone_sosta():
+async def osm_zone_sosta(full: bool = False):
     """
     Scarica dal portale Open Data del Comune di Bologna le vie con zone di sosta
-    (strisce blu). Ritorna il conteggio totale e un campione dei primi 10 nomi.
+    (strisce blu). Con full=true ritorna tutti i nomi, altrimenti solo i primi 10.
     """
     nomi = await fetch_zone_sosta()
-    sample = sorted(nomi)[:10]
-    return {"count": len(nomi), "sample": sample}
+    if full:
+        return {"count": len(nomi), "nomi": sorted(nomi)}
+    return {"count": len(nomi), "sample": sorted(nomi)[:10]}
 
 
 @app.get("/traffico/storico", tags=["Traffico"])
