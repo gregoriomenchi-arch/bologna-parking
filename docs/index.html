@@ -566,20 +566,17 @@
     } catch (_) { /* backend opzionale */ }
   }
 
-  // ── Avvio ─────────────────────────────────────────────────────────────
-  caricaZoneSosta();
-  caricaStrade();
+  // ── Avvio — zone sosta prima, poi strade ─────────────────────────────
+  caricaZoneSosta().then(() => {
+    caricaStrade();
+    setInterval(caricaStrade, 5 * 60 * 1000);
+  });
+
   caricaParcheggi();
   caricaEventi();
   aggiornaBannerCondizioni();
-
-  // Strade ogni 5 minuti (score cambia con i dati live)
-  setInterval(caricaStrade,   5 * 60 * 1000);
-  // Scambiatori ogni 60 secondi
   setInterval(caricaParcheggi, 60_000);
-  // Banner eventi ogni 5 minuti
   setInterval(caricaEventi, 5 * 60 * 1000);
-  // Condizioni ogni 10 minuti (sincronizzato con cache meteo)
   setInterval(aggiornaBannerCondizioni, 10 * 60 * 1000);
 </script>
 </body>
