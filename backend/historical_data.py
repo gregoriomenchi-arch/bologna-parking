@@ -130,6 +130,19 @@ def _storico_ora_corrente() -> list[tuple[str, float, float, float]]:
         """, (now.hour, now.weekday())).fetchall()
     return [(r[0], r[1], r[2], r[3]) for r in rows]
 
+def _traffic_ora_corrente() -> list[tuple[float, float, float]]:
+    """[(lat, lon, congestione_media)] per ora e giorno correnti dai dati TomTom."""
+    now = datetime.now(timezone.utc)
+    with connect() as conn:
+        rows = conn.execute("""
+            SELECT lat, lon, AVG(congestione)
+            FROM traffic_readings
+            WHERE ora = ? AND giorno_settimana = ?
+              AND congestione IS NOT NULL
+            GROUP BY lat, lon
+        """, (now.hour, now.weekday())).fetchall()
+    return [(r[0], r[1], r[2]) for r in rows]
+
 
 # ---------------------------------------------------------------------------
 # Cache strade Overpass
@@ -200,33 +213,52 @@ def _base_score(
     lat: float, lon: float,
     live_pts: list[tuple[float, float, float, str]],
     storico: list[tuple[str, float, float, float]],
+    traffic_pts: list[tuple[float, float, float]] | None = None,
 ) -> tuple[float, int, int]:
-    """
-    Calcola la componente base dello score da dati real-time + storico.
-    Ritorna (base_score, n_live_vicini, n_storico_vicini).
-    """
     nearby_live = [(occ, nome) for (plat, plon, occ, nome) in live_pts
                    if _haversine_km(lat, lon, plat, plon) < 1.0]
     nearby_names = {nome for _, nome in nearby_live}
     nearby_occ   = [occ  for occ, _  in nearby_live]
 
-    # Storico: preferisci i parcheggi già trovati nel live, altrimenti per coordinate
     if nearby_names:
         nearby_hist = [occ for (nome, occ, _, __) in storico if nome in nearby_names]
     else:
         nearby_hist = [occ for (_, occ, plat, plon) in storico
                        if _haversine_km(lat, lon, plat, plon) < 1.0]
 
+    # Componente TomTom: punto più vicino entro 2 km
+    traffic_score = None
+    if traffic_pts:
+        vicini = [(cong, _haversine_km(lat, lon, tlat, tlon))
+                  for tlat, tlon, cong in traffic_pts]
+        vicini_entro = [(cong, d) for cong, d in vicini if d < 2.0]
+        if vicini_entro:
+            # pesa per distanza inversa
+            cong_pesata = sum(cong * (1 / (d + 0.1)) for cong, d in vicini_entro)
+            peso_tot    = sum(1 / (d + 0.1) for _, d in vicini_entro)
+            cong_media  = cong_pesata / peso_tot
+            traffic_score = 100.0 - cong_media  # alta congestione = basso score
+
     if nearby_occ and nearby_hist:
-        rt = 100.0 - (sum(nearby_occ) / len(nearby_occ))
-        hs = 100.0 - (sum(nearby_hist) / len(nearby_hist))
-        base = 0.6 * rt + 0.4 * hs   # 60% real-time, 40% storico
+        rt   = 100.0 - (sum(nearby_occ) / len(nearby_occ))
+        hs   = 100.0 - (sum(nearby_hist) / len(nearby_hist))
+        base = 0.5 * rt + 0.3 * hs + (0.2 * traffic_score if traffic_score is not None else 0.0)
+        if traffic_score is None:
+            base = 0.6 * rt + 0.4 * hs
     elif nearby_occ:
-        base = 100.0 - (sum(nearby_occ) / len(nearby_occ))
+        base = (0.7 * (100.0 - sum(nearby_occ)/len(nearby_occ))
+                + (0.3 * traffic_score if traffic_score is not None else 0.0))
+        if traffic_score is None:
+            base = 100.0 - sum(nearby_occ)/len(nearby_occ)
     elif nearby_hist:
-        base = 100.0 - (sum(nearby_hist) / len(nearby_hist))
+        base = (0.6 * (100.0 - sum(nearby_hist)/len(nearby_hist))
+                + (0.4 * traffic_score if traffic_score is not None else 0.0))
+        if traffic_score is None:
+            base = 100.0 - sum(nearby_hist)/len(nearby_hist)
+    elif traffic_score is not None:
+        base = traffic_score   # solo TomTom — meglio di 50.0 fisso
     else:
-        base = 50.0   # nessun dato nelle vicinanze
+        base = 50.0
 
     return base, len(nearby_occ), len(nearby_hist)
 
@@ -243,12 +275,13 @@ def _compute_score(
     unibo_lezioni: bool = False,
     unibo_esami: bool = False,
     ztl_attiva_tra_30_min: bool = False,
+    traffic_pts: list[tuple[float, float, float]] | None = None,
 ) -> tuple[float, dict]:
     """
     Calcola score (0-100) e breakdown dei fattori per una singola strada.
     Ritorna (score, factors) dove factors è un dict per il debug.
     """
-    base, n_live, n_hist = _base_score(lat, lon, live_pts, storico)
+    base, n_live, n_hist = _base_score(lat, lon, live_pts, storico, traffic_pts)
     factors: dict[str, float] = {"base": round(base, 1)}
     score = base
 
@@ -327,7 +360,8 @@ def compute_street_scores(
     Aggiunge la proprietà 'score' (0-100) a ogni feature del GeoJSON e la ritorna.
     Parametri keyword-only per i predittori reali (tutti con default False = backward compat).
     """
-    storico = _storico_ora_corrente()
+    storico     = _storico_ora_corrente()
+    traffic_pts = _traffic_ora_corrente()
     live_pts = [
         (p.coordinate.lat, p.coordinate.lon, p.occupazione_pct, p.nome)
         for p in live_parcheggi if p.coordinate
@@ -347,6 +381,7 @@ def compute_street_scores(
             unibo_lezioni=unibo_lezioni,
             unibo_esami=unibo_esami,
             ztl_attiva_tra_30_min=ztl_attiva_tra_30_min,
+            traffic_pts=traffic_pts,
         )
 
         props = {**feat["properties"], "score": score}
@@ -371,11 +406,11 @@ def compute_single_street_score(
     Usato dall'endpoint /debug/score/{via}.
     Ritorna None se la strada non è trovata.
     """
-    query_low = name_query.lower()
+    query_low = name_query.lower().strip()
     match = None
     for feat in streets_geojson.get("features", []):
-        nome = feat["properties"].get("name", "")
-        if query_low in nome.lower():
+        nome = feat["properties"].get("name", "").lower()
+        if query_low in nome or all(w in nome for w in query_low.split()):
             match = feat
             break
     if match is None:
@@ -385,7 +420,8 @@ def compute_single_street_score(
     lat, lon = _midpoint(coords)
     nome = match["properties"].get("name", "")
 
-    storico = _storico_ora_corrente()
+    storico     = _storico_ora_corrente()
+    traffic_pts = _traffic_ora_corrente()
     live_pts = [
         (p.coordinate.lat, p.coordinate.lon, p.occupazione_pct, p.nome)
         for p in live_parcheggi if p.coordinate
@@ -397,6 +433,7 @@ def compute_single_street_score(
         unibo_lezioni=unibo_lezioni,
         unibo_esami=unibo_esami,
         ztl_attiva_tra_30_min=ztl_attiva_tra_30_min,
+        traffic_pts=traffic_pts,
     )
 
     from unibo import is_zona_universitaria
