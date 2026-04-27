@@ -128,7 +128,7 @@ def _storico_ora_corrente() -> list[tuple[str, float, float, float]]:
               AND lat IS NOT NULL AND lon IS NOT NULL
             GROUP BY parcheggio_nome
         """, (now.hour, now.weekday())).fetchall()
-    return [(r[0], r[1], r[2], r[3]) for r in rows]
+    return [(r[0], float(r[1]), float(r[2]), float(r[3])) for r in rows]
 
 def _traffic_ora_corrente() -> list[tuple[float, float, float]]:
     """[(lat, lon, congestione_media)] per ora e giorno correnti dai dati TomTom."""
