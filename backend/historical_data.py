@@ -141,7 +141,7 @@ def _traffic_ora_corrente() -> list[tuple[float, float, float]]:
               AND congestione IS NOT NULL
             GROUP BY lat, lon
         """, (now.hour, now.weekday())).fetchall()
-    return [(r[0], r[1], r[2]) for r in rows]
+    return [(float(r[0]), float(r[1]), float(r[2])) for r in rows]
 
 
 # ---------------------------------------------------------------------------
@@ -411,55 +411,62 @@ def compute_single_street_score(
     Usato dall'endpoint /debug/score/{via}.
     Ritorna None se la strada non è trovata.
     """
-    query_low = name_query.lower().strip()
-    match = None
-    for feat in streets_geojson.get("features", []):
-        nome = feat["properties"].get("name", "")
-        nome_low = nome.lower()
-        if query_low in nome_low or all(w in nome_low for w in query_low.split()):
-            match = feat
-            break
-    if match is None:
-        return None
+    import traceback
+    try:
+        query_low = name_query.lower().strip()
+        match = None
+        for feat in streets_geojson.get("features", []):
+            nome = feat["properties"].get("name", "")
+            nome_low = nome.lower()
+            if query_low in nome_low or all(w in nome_low for w in query_low.split()):
+                match = feat
+                break
+        if match is None:
+            return None
 
-    coords = match["geometry"]["coordinates"]
-    lat, lon = _midpoint(coords)
-    nome = match["properties"].get("name", "")
+        coords = match["geometry"]["coordinates"]
+        lat, lon = _midpoint(coords)
+        nome = match["properties"].get("name", "")
 
-    storico     = _storico_ora_corrente()
-    traffic_pts = _traffic_ora_corrente()
-    live_pts = [
-        (p.coordinate.lat, p.coordinate.lon, p.occupazione_pct, p.nome)
-        for p in live_parcheggi if p.coordinate
-    ]
+        storico     = _storico_ora_corrente()
+        traffic_pts = _traffic_ora_corrente()
+        live_pts = [
+            (p.coordinate.lat, p.coordinate.lon, p.occupazione_pct, p.nome)
+            for p in live_parcheggi if p.coordinate
+        ]
 
-    score, factors = _compute_score(
-        lat, lon, nome, live_pts, storico, eventi,
-        pioggia=pioggia,
-        unibo_lezioni=unibo_lezioni,
-        unibo_esami=unibo_esami,
-        ztl_attiva_tra_30_min=ztl_attiva_tra_30_min,
-        traffic_pts=traffic_pts,
-    )
+        score, factors = _compute_score(
+            lat, lon, nome, live_pts, storico, eventi,
+            pioggia=pioggia,
+            unibo_lezioni=unibo_lezioni,
+            unibo_esami=unibo_esami,
+            ztl_attiva_tra_30_min=ztl_attiva_tra_30_min,
+            traffic_pts=traffic_pts,
+        )
 
-    from unibo import is_zona_universitaria
-    from ztl import is_in_ztl, is_nel_buffer_ztl
+        from unibo import is_zona_universitaria
+        from ztl import is_in_ztl, is_nel_buffer_ztl
 
-    return {
-        "via": nome,
-        "lat": lat,
-        "lon": lon,
-        "score_finale": score,
-        "fattori": factors,
-        "contesto": {
-            "in_zona_unibo": is_zona_universitaria(lat, lon),
-            "in_ztl": is_in_ztl(lat, lon),
-            "nel_buffer_ztl": is_nel_buffer_ztl(lat, lon),
-        },
-        "predittori_attivi": {
-            "pioggia": pioggia,
-            "unibo_lezioni": unibo_lezioni,
-            "unibo_esami": unibo_esami,
-            "ztl_attiva_tra_30_min": ztl_attiva_tra_30_min,
-        },
-    }
+        return {
+            "via": nome,
+            "lat": lat,
+            "lon": lon,
+            "score_finale": score,
+            "fattori": factors,
+            "contesto": {
+                "in_zona_unibo": is_zona_universitaria(lat, lon),
+                "in_ztl": is_in_ztl(lat, lon),
+                "nel_buffer_ztl": is_nel_buffer_ztl(lat, lon),
+            },
+            "predittori_attivi": {
+                "pioggia": pioggia,
+                "unibo_lezioni": unibo_lezioni,
+                "unibo_esami": unibo_esami,
+                "ztl_attiva_tra_30_min": ztl_attiva_tra_30_min,
+            },
+        }
+    except Exception as e:
+        logging.getLogger("bologna_parking").error(
+            "compute_single_street_score error: %s", traceback.format_exc()
+        )
+        raise
