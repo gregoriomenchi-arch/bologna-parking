@@ -223,7 +223,6 @@
   const stradeLayer   = L.layerGroup().addTo(map);  // polyline strade
   const markersLayer  = L.layerGroup().addTo(map);  // cerchi scambiatori
   let firstLoad = true;
-  let zoneSostaSet = null; // set di nomi via con strisce blu
 
   // ── Emoji per chiave fattore ─────────────────────────────────────────
   const FACTOR_EMOJI = {
@@ -257,7 +256,7 @@
     const ESCLUDI_HIGHWAY = new Set([
       'motorway','motorway_link','trunk','trunk_link',
       'footway','cycleway','path','steps','pedestrian',
-      'track','service','unclassified'
+      'track','service'
     ]);
 
     const geojsonFiltrato = {
@@ -265,13 +264,7 @@
       features: (geojson.features || []).filter(f => {
         const hw   = f.properties.highway;
         const nome = f.properties.name;
-        if (!nome || nome.trim() === '' || ESCLUDI_HIGHWAY.has(hw)) return false;
-        const nomeNorm = nome.toLowerCase().trim();
-        const hasParcheggio = (zoneSostaSet === null) ||
-                              zoneSostaSet.has(nomeNorm) ||
-                              hw === 'primary' ||
-                              hw === 'secondary';
-        return hasParcheggio;
+        return nome && nome.trim() !== '' && !ESCLUDI_HIGHWAY.has(hw);
       })
     };
 
@@ -318,24 +311,6 @@
       },
     }).addTo(stradeLayer);
     console.log(`[Bologna Parking] strade (${source}): ${geojson.features?.length}`);
-  }
-
-  // ── Zone sosta (strisce blu) ──────────────────────────────────────────
-  async function caricaZoneSosta() {
-    try {
-      const res = await fetch(`${API}/osm/zone-sosta?full=true`,
-                              { signal: AbortSignal.timeout(8000) });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.nomi && data.nomi.length > 0) {
-        zoneSostaSet = new Set(data.nomi);
-        console.log(`[Bologna Parking] zone sosta: ${zoneSostaSet.size}`);
-        // ri-renderizza le strade con il filtro aggiornato
-        caricaStrade();
-      }
-    } catch (e) {
-      console.warn('[Bologna Parking] zone sosta non disponibili:', e);
-    }
   }
 
   // ── Strade colorate ───────────────────────────────────────────────────
@@ -566,7 +541,6 @@
   }
 
   // ── Avvio ─────────────────────────────────────────────────────────────
-  caricaZoneSosta();
   caricaStrade();
   caricaParcheggi();
   caricaEventi();
