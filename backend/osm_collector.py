@@ -525,9 +525,17 @@ async def fetch_zone_sosta() -> set[str]:
             if not records:
                 break
             for r in records:
-                via = r.get("denominazione_via") or r.get("nome_via") or ""
-                if via:
-                    nomi.add(via.lower().strip())
+                descr = r.get("descr") or ""
+                # estrae "VIA STALINGRADO" da "STALINGRADO(VIA)" → "via stalingrado"
+                if "(" in descr:
+                    nome_raw, tipo_raw = descr.split("(", 1)
+                    tipo = tipo_raw.rstrip(")").strip().lower()
+                    nome = nome_raw.strip().lower()
+                    via_completa = f"{tipo} {nome}".strip()
+                else:
+                    via_completa = descr.lower().strip()
+                if via_completa:
+                    nomi.add(via_completa)
             offset += 100
             if offset >= data.get("total_count", 0):
                 break
