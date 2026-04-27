@@ -271,36 +271,62 @@ class SostaBoClient:
 # Parcheggi scambiatori / grandi strutture — dati statici con stima oraria
 # ---------------------------------------------------------------------------
 
-# (nome, indirizzo, lat, lon, posti_totali, occupazione_base_%)
-# occupazione_base = occupazione tipica nelle ore centrali del giorno
+# (nome, indirizzo, lat, lon, posti_totali, occupazione_base_%, tipo)
+# tipo: "scambiatore" | "struttura" | "fiera"
 _STATIC_PARCHEGGI_DEF: list[tuple] = [
-    ("Parcheggio Tanari",         "Via Luigi Tanari 17",     44.5089, 11.3401, 350, 55),
-    ("Parcheggio ex Staveco",     "Viale Panzacchi 10",      44.4889, 11.3089, 500, 40),
-    ("Parcheggio Antistadio",     "Via Andrea Costa",        44.4934, 11.3089, 400, 45),
-    ("Parcheggio Stazione FS",    "Via Matteotti 5",         44.5058, 11.3442, 600, 80),
-    ("Parcheggio Saba S.Orsola",  "Via Albertoni 8",         44.4889, 11.3567, 450, 70),
-    ("Parcheggio Certosa",        "Via della Certosa",       44.4756, 11.3089, 300, 35),
-    ("Parcheggio VIII Agosto",    "Piazza VIII Agosto",      44.5012, 11.3456, 250, 75),
-    ("Parcheggio Nuovo Stazione", "Via Fioravanti 4",        44.5078, 11.3398, 700, 65),
-    ("Parcheggio Michelino",      "Via Michelino",           44.5234, 11.3567, 400, 50),
-    ("Parcheggio Costa",          "Via Andrea Costa (est)",  44.4912, 11.3123, 320, 45),
+    # ── SCAMBIATORI (P+Bus, pendolari) ──────────────────────────────────
+    ("Parcheggio Tanari",            "Via Luigi Tanari 17",       44.5041, 11.3265, 450, 65, "scambiatore"),
+    ("Parcheggio Prati di Caprara",  "Via Prati di Caprara",      44.5082, 11.3085, 400, 55, "scambiatore"),
+    ("Parcheggio Antistadio",        "Via Andrea Costa",          44.4918, 11.3064, 283, 50, "scambiatore"),
+    ("Parcheggio Ferriera",          "Via della Ferriera",        44.4845, 11.3382, 200, 45, "scambiatore"),
+    ("Parcheggio Santa Viola",       "Via Santa Viola",           44.4838, 11.3040, 300, 50, "scambiatore"),
+    ("Parcheggio Zaccherini Alvisi", "Via Zaccherini Alvisi",     44.4924, 11.3721, 250, 45, "scambiatore"),
+    ("Parcheggio Largo Lercaro",     "Largo Cardinale Lercaro",   44.5042, 11.3388, 300, 55, "scambiatore"),
+    ("Parcheggio Piazza della Pace", "Piazza della Pace",         44.4885, 11.3185, 200, 45, "scambiatore"),
+    ("Parcheggio Certosa",           "Via MK Gandhi",             44.4935, 11.3268, 325, 40, "scambiatore"),
+    ("Parcheggio Ex-Staveco",        "Viale Panzacchi 10",        44.4857, 11.3444, 180, 45, "scambiatore"),
+    # ── FIERA (scambiatore con picco eventi) ────────────────────────────
+    ("Parcheggio Fiera Sud",         "Piazza Costituzione",       44.5121, 11.3609, 369, 50, "fiera"),
+    ("Parcheggio Michelino",         "Via Michelino",             44.5131, 11.3724, 800, 40, "fiera"),
+    # ── STRUTTURE CENTRO / SEMICENTRO ───────────────────────────────────
+    ("Parcheggio VIII Agosto",       "Piazza VIII Agosto",        44.5011, 11.3440, 981, 75, "struttura"),
+    ("Parcheggio Riva Reno",         "Via del Rondone",           44.4975, 11.3355, 543, 70, "struttura"),
+    ("Parcheggio Autostazione",      "Piazza Medaglie d'Oro",     44.5055, 11.3412, 400, 80, "struttura"),
+    ("Parcheggio Abycar Stazione",   "Via Fioravanti",            44.5064, 11.3388, 800, 75, "struttura"),
+    ("Parcheggio G.T.",              "Via Indipendenza",          44.4992, 11.3457, 500, 70, "struttura"),
+    ("Bologna Centrale P1",          "Via Matteotti 5",           44.5067, 11.3435, 477, 80, "struttura"),
+    ("Parcheggio Sant'Orsola SABA",  "Via Pietro Albertoni 8",    44.4914, 11.3682, 600, 65, "struttura"),
+    ("Parcheggio Salesiani",         "Via Mazzini",               44.5075, 11.3462, 300, 60, "struttura"),
+    ("Parcheggio Piazzale Baldi",    "Piazzale Baldi",            44.5034, 11.3518, 200, 55, "struttura"),
+    ("Piazzale Atleti Azzurri",      "Piazzale Atleti Azzurri",   44.5028, 11.3710, 350, 50, "struttura"),
 ]
 
-# Moltiplicatori orari applicati alla occupazione_base
-_ORA_FACTOR: list[tuple[int, int, float]] = [
+# Moltiplicatori orari per tipo di parcheggio
+_ORA_FACTOR_SCAMBIATORE: list[tuple[int, int, float]] = [
+    ( 0,  6, 0.10),   # notte
+    ( 6,  7, 0.25),   # pre-mattina
+    ( 7,  9, 0.85),   # picco arrivi pendolari
+    ( 9, 17, 0.60),   # giornata
+    (17, 20, 0.40),   # partenza pendolari — si svuota
+    (20, 24, 0.15),   # sera/notte
+]
+
+_ORA_FACTOR_STRUTTURA: list[tuple[int, int, float]] = [
     ( 0,  7, 0.15),   # notte
-    ( 7,  9, 0.70),   # mattina presto
-    ( 9, 12, 1.00),   # mattina
-    (12, 14, 0.90),   # pranzo
-    (14, 17, 1.00),   # pomeriggio
-    (17, 20, 1.10),   # picco serale
-    (20, 23, 0.65),   # sera
-    (23, 24, 0.20),   # tarda notte
+    ( 7,  8, 0.30),   # apertura
+    ( 8, 10, 0.55),   # crescita mattutina
+    (10, 13, 0.75),   # mattina piena
+    (13, 15, 0.90),   # picco pranzo/shopping
+    (15, 19, 0.80),   # pomeriggio alto
+    (19, 21, 0.55),   # prima sera
+    (21, 24, 0.35),   # sera
 ]
 
 
-def _ora_factor(hour: int) -> float:
-    for start, end, factor in _ORA_FACTOR:
+def _ora_factor(hour: int, tipo: str) -> float:
+    table = (_ORA_FACTOR_SCAMBIATORE if tipo in ("scambiatore", "fiera")
+             else _ORA_FACTOR_STRUTTURA)
+    for start, end, factor in table:
         if start <= hour < end:
             return factor
     return 1.0
@@ -308,16 +334,16 @@ def _ora_factor(hour: int) -> float:
 
 def get_static_parcheggi() -> list[ParcheggioDisponibilita]:
     """
-    Restituisce i 10 grandi parcheggi/scambiatori con occupazione stimata
-    in base all'ora corrente (nessuna chiamata esterna).
+    Restituisce i 22 parcheggi/scambiatori di Bologna con occupazione stimata
+    in base all'ora corrente e al tipo (nessuna chiamata esterna).
     """
-    now    = datetime.now()
-    factor = _ora_factor(now.hour)
+    now = datetime.now()
     result = []
-    for nome, _indirizzo, lat, lon, totale, base_pct in _STATIC_PARCHEGGI_DEF:
-        occ_pct   = min(99.0, round(base_pct * factor, 1))
-        occupati  = round(totale * occ_pct / 100)
-        liberi    = totale - occupati
+    for nome, _indirizzo, lat, lon, totale, base_pct, tipo in _STATIC_PARCHEGGI_DEF:
+        factor   = _ora_factor(now.hour, tipo)
+        occ_pct  = min(99.0, round(base_pct * factor, 1))
+        occupati = round(totale * occ_pct / 100)
+        liberi   = totale - occupati
         result.append(ParcheggioDisponibilita(
             nome=nome,
             posti_liberi=liberi,
