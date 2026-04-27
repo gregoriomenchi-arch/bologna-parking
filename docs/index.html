@@ -267,7 +267,7 @@
         const nome = f.properties.name;
         if (!nome || nome.trim() === '' || ESCLUDI_HIGHWAY.has(hw)) return false;
         const nomeNorm = nome.toLowerCase().trim();
-        const hasParcheggio = !zoneSostaSet ||
+        const hasParcheggio = (zoneSostaSet === null) ||
                               zoneSostaSet.has(nomeNorm) ||
                               hw === 'primary' ||
                               hw === 'secondary';
@@ -323,20 +323,19 @@
   // ── Zone sosta (strisce blu) ──────────────────────────────────────────
   async function caricaZoneSosta() {
     try {
-      const res = await fetch(`${API}/osm/zone-sosta`,
+      const res = await fetch(`${API}/osm/zone-sosta?full=true`,
                               { signal: AbortSignal.timeout(8000) });
       if (!res.ok) return;
       const data = await res.json();
-      // il backend ritorna {count, sample} — ci serve la lista completa
-      // quindi chiamiamo l'endpoint con full=true
-      const res2 = await fetch(`${API}/osm/zone-sosta?full=true`,
-                               { signal: AbortSignal.timeout(8000) });
-      if (res2.ok) {
-        const data2 = await res2.json();
-        zoneSostaSet = new Set(data2.nomi || []);
-        console.log(`[Bologna Parking] zone sosta caricate: ${zoneSostaSet.size}`);
+      if (data.nomi && data.nomi.length > 0) {
+        zoneSostaSet = new Set(data.nomi);
+        console.log(`[Bologna Parking] zone sosta: ${zoneSostaSet.size}`);
+        // ri-renderizza le strade con il filtro aggiornato
+        caricaStrade();
       }
-    } catch (_) {}
+    } catch (e) {
+      console.warn('[Bologna Parking] zone sosta non disponibili:', e);
+    }
   }
 
   // ── Strade colorate ───────────────────────────────────────────────────
@@ -566,15 +565,13 @@
     } catch (_) { /* backend opzionale */ }
   }
 
-  // ── Avvio — zone sosta prima, poi strade ─────────────────────────────
-  caricaZoneSosta().then(() => {
-    caricaStrade();
-    setInterval(caricaStrade, 5 * 60 * 1000);
-  });
-
+  // ── Avvio ─────────────────────────────────────────────────────────────
+  caricaZoneSosta();
+  caricaStrade();
   caricaParcheggi();
   caricaEventi();
   aggiornaBannerCondizioni();
+  setInterval(caricaStrade, 5 * 60 * 1000);
   setInterval(caricaParcheggi, 60_000);
   setInterval(caricaEventi, 5 * 60 * 1000);
   setInterval(aggiornaBannerCondizioni, 10 * 60 * 1000);
