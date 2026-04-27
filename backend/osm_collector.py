@@ -171,7 +171,14 @@ def init_osm_db() -> None:
                 nome             TEXT,
                 coordinate_json  TEXT
             );
-            CREATE INDEX IF NOT EXISTS idx_ped_osm ON pedestrian_areas(osm_id)
+            CREATE INDEX IF NOT EXISTS idx_ped_osm ON pedestrian_areas(osm_id);
+
+            CREATE TABLE IF NOT EXISTS zone_sosta_cache (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome_via    TEXT NOT NULL UNIQUE,
+                aggiornato  TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_zsosta_via ON zone_sosta_cache(nome_via)
         """)
 
 
@@ -491,6 +498,40 @@ def _save_pedestrian_areas(elements: list[dict]) -> int:
                 rows,
             )
     return len(rows)
+
+
+# ---------------------------------------------------------------------------
+# Zone sosta (strisce blu) — Open Data Comune di Bologna
+# ---------------------------------------------------------------------------
+
+async def fetch_zone_sosta() -> set[str]:
+    """
+    Scarica il dataset 'Zone sosta per via e civico' dal Comune di Bologna.
+    Ritorna un set di nomi di via (lowercase) che hanno strisce blu.
+    """
+    base_url = (
+        "https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets"
+        "/stradario-generale-al-25nov2022/records"
+    )
+    nomi: set[str] = set()
+    offset = 0
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        while True:
+            resp = await client.get(base_url, params={"limit": 100, "offset": offset})
+            if not resp.is_success:
+                break
+            data = resp.json()
+            records = data.get("results", [])
+            if not records:
+                break
+            for r in records:
+                via = r.get("denominazione_via") or r.get("nome_via") or ""
+                if via:
+                    nomi.add(via.lower().strip())
+            offset += 100
+            if offset >= data.get("total_count", 0):
+                break
+    return nomi
 
 
 # ---------------------------------------------------------------------------

@@ -39,6 +39,7 @@ from osm_collector import (
     init_osm_db,
     collect_osm_data,
     get_osm_stats,
+    fetch_zone_sosta,
 )
 from weather import get_meteo, meteo_to_dict, OPENWEATHER_KEY
 from unibo import is_giorno_lezioni, is_sessione_esami, get_status as unibo_status
@@ -307,6 +308,17 @@ async def osm_collect(force: bool = False):
     """
     asyncio.create_task(collect_osm_data(force=force))
     return {"status": "avviato", "force": force}
+
+
+@app.get("/osm/zone-sosta", tags=["OSM"])
+async def osm_zone_sosta():
+    """
+    Scarica dal portale Open Data del Comune di Bologna le vie con zone di sosta
+    (strisce blu). Ritorna il conteggio totale e un campione dei primi 10 nomi.
+    """
+    nomi = await fetch_zone_sosta()
+    sample = sorted(nomi)[:10]
+    return {"count": len(nomi), "sample": sample}
 
 
 @app.get("/traffico/storico", tags=["Traffico"])

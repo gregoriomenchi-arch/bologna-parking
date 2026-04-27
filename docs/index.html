@@ -253,9 +253,23 @@
     stradeLayer.clearLayers();
     const srcLabel = source === "live" ? "dati live" : "stima statica";
 
+    const ESCLUDI_HIGHWAY = new Set([
+      'motorway','motorway_link','trunk','trunk_link',
+      'footway','cycleway','path','steps','pedestrian',
+      'track','service','unclassified'
+    ]);
+
+    const geojsonFiltrato = {
+      ...geojson,
+      features: (geojson.features || []).filter(f =>
+        !ESCLUDI_HIGHWAY.has(f.properties.highway) &&
+        f.properties.name && f.properties.name.trim() !== ''
+      )
+    };
+
     // Score medio per nome strada → segmenti della stessa via hanno stesso colore
     const nameSum = {}, nameCount = {};
-    for (const f of geojson.features || []) {
+    for (const f of geojsonFiltrato.features) {
       const n = f.properties.name;
       const s = f.properties.score ?? 50;
       if (n) { nameSum[n] = (nameSum[n] || 0) + s; nameCount[n] = (nameCount[n] || 0) + 1; }
@@ -263,7 +277,7 @@
     const nameScore = {};
     for (const n in nameSum) nameScore[n] = nameSum[n] / nameCount[n];
 
-    L.geoJSON(geojson, {
+    L.geoJSON(geojsonFiltrato, {
       style: feature => {
         const n     = feature.properties.name;
         const score = n && nameScore[n] != null ? nameScore[n] : (feature.properties.score ?? 50);
@@ -370,17 +384,6 @@
     const errorBanner = document.getElementById("error-banner");
     errorBanner.style.display = "none";
 
-    // Carica sempre i parcheggi statici (non dipendono dal backend live)
-    try {
-      const resS = await fetch(`${API}/parcheggi/statici`,
-                               { signal: AbortSignal.timeout(4000) });
-      if (resS.ok) {
-        const staticList = await resS.json();
-        // Non pulire il layer qui — verrà pulito insieme ai live sotto
-        staticList.forEach(p => _addMarker(p, true));
-      }
-    } catch (_) { /* backend opzionale */ }
-
     try {
       const res = await fetch(`${API}/parcheggi/disponibilita`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -457,7 +460,13 @@
 
   function renderEventBanner(eventi) {
     const banner = document.getElementById("event-banner");
-    const visible = eventi.filter(ev => !_dismissedEvents.has(ev.id ?? ev.nome));
+    const seen = new Set();
+    const unique = eventi.filter(ev => {
+      if (seen.has(ev.nome)) return false;
+      seen.add(ev.nome);
+      return true;
+    });
+    const visible = unique.filter(ev => !_dismissedEvents.has(ev.id ?? ev.nome));
     if (!visible.length) { banner.style.display = "none"; return; }
 
     banner.innerHTML = visible.map(ev => {

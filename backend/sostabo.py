@@ -289,7 +289,6 @@ _STATIC_PARCHEGGI_DEF: list[tuple] = [
     ("Parcheggio Fiera Sud",         "Piazza Costituzione",       44.5121, 11.3609, 369, 50, "fiera"),
     ("Parcheggio Michelino",         "Via Michelino",             44.5131, 11.3724, 800, 40, "fiera"),
     # ── STRUTTURE CENTRO / SEMICENTRO ───────────────────────────────────
-    ("Parcheggio VIII Agosto",       "Piazza VIII Agosto",        44.5011, 11.3440, 981, 75, "struttura"),
     ("Parcheggio Riva Reno",         "Via del Rondone",           44.4975, 11.3355, 543, 70, "struttura"),
     ("Parcheggio Autostazione",      "Piazza Medaglie d'Oro",     44.5055, 11.3412, 400, 80, "struttura"),
     ("Parcheggio Abycar Stazione",   "Via Fioravanti",            44.5064, 11.3388, 800, 75, "struttura"),
