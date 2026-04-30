@@ -9,6 +9,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import httpx
 from pydantic import BaseModel
 
 from db import connect
@@ -188,7 +189,11 @@ def seed_test_events() -> None:
     v_unipol    = VENUES["Unipol Arena"]
     v_teatro    = VENUES["Teatro Comunale"]
 
-    test_events = [
+    with connect() as conn:
+        existing_names = {
+            r[0] for r in conn.execute("SELECT nome FROM eventi").fetchall()
+        }
+    test_events = [e for e in [
         # Partita in corso (banner "in corso")
         Evento(
             nome="Bologna FC vs Inter",
@@ -229,20 +234,140 @@ def seed_test_events() -> None:
             impatto=v_teatro["impatto"], raggio_km=v_teatro["raggio_km"],
             fonte="test",
         ),
-    ]
+    ] if e.nome not in existing_names]
 
     _save_events(test_events)
-    log.info("Seed eventi di test: %d eventi caricati", len(test_events))
+    log.info("Seed eventi di test: %d nuovi eventi inseriti", len(test_events))
 
 
 # ---------------------------------------------------------------------------
-# Stub per futura integrazione scraping reale
+# Scraper reale — Bologna FC (football-data.org, free tier)
+# ---------------------------------------------------------------------------
+
+async def _fetch_bologna_fc() -> list[Evento]:
+    """
+    Scarica le prossime partite del Bologna FC da football-data.org.
+    Team ID Bologna FC = 98, competizione Serie A = SA.
+    """
+    url = "https://api.football-data.org/v4/teams/98/matches"
+    params = {"status": "SCHEDULED,LIVE", "limit": 10}
+    venue = VENUES["Stadio Renato Dall'Ara"]
+    eventi = []
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(url, params=params,
+                                    headers={"X-Auth-Token": ""})
+            if not resp.ok:
+                log.warning("football-data.org: %s", resp.status_code)
+                return []
+            data = resp.json()
+        for match in data.get("matches", []):
+            utc_date = match.get("utcDate")
+            if not utc_date:
+                continue
+            dt_start = datetime.fromisoformat(utc_date.replace("Z", "+00:00"))
+            dt_fine = dt_start + timedelta(hours=2)
+            home = match.get("homeTeam", {}).get("shortName", "")
+            away = match.get("awayTeam", {}).get("shortName", "")
+            nome = f"{home} vs {away}"
+            # solo partite in casa
+            if match.get("homeTeam", {}).get("id") != 98:
+                continue
+            eventi.append(Evento(
+                nome=nome,
+                venue="Stadio Renato Dall'Ara",
+                data_inizio=dt_start,
+                data_fine=dt_fine,
+                lat=venue["lat"], lon=venue["lon"],
+                impatto=venue["impatto"], raggio_km=venue["raggio_km"],
+                fonte="football-data.org",
+            ))
+    except Exception as exc:
+        log.warning("Bologna FC scraping error: %s", exc)
+    return eventi
+
+
+# ---------------------------------------------------------------------------
+# Scraper reale — Fiera di Bologna (HTML scraping)
+# ---------------------------------------------------------------------------
+
+async def _fetch_fiera_bologna() -> list[Evento]:
+    """
+    Scarica le manifestazioni da Fiera Bologna via HTML pubblico.
+    """
+    import re
+    url = "https://www.bolognafiere.it/it/manifestazioni.html"
+    venue = VENUES["Fiera di Bologna"]
+    eventi = []
+    try:
+        async with httpx.AsyncClient(timeout=10.0,
+                                     follow_redirects=True) as client:
+            resp = await client.get(url, headers={
+                "User-Agent": "Mozilla/5.0 Bologna Parking App"
+            })
+            if not resp.ok:
+                return []
+            html = resp.text
+
+        pattern = re.compile(
+            r'<h\d[^>]*>\s*([^<]{5,80})\s*</h\d>.*?'
+            r'(\d{2}/\d{2}/\d{4})\s*[–\-]\s*(\d{2}/\d{2}/\d{4})',
+            re.DOTALL
+        )
+        now = datetime.now(timezone.utc)
+        for m in pattern.finditer(html):
+            nome = m.group(1).strip()[:80]
+            try:
+                dt_start = datetime.strptime(
+                    m.group(2), "%d/%m/%Y").replace(tzinfo=timezone.utc)
+                dt_fine = datetime.strptime(
+                    m.group(3), "%d/%m/%Y").replace(
+                    hour=22, tzinfo=timezone.utc)
+            except ValueError:
+                continue
+            if dt_fine < now:
+                continue
+            eventi.append(Evento(
+                nome=nome,
+                venue="Fiera di Bologna",
+                data_inizio=dt_start,
+                data_fine=dt_fine,
+                lat=venue["lat"], lon=venue["lon"],
+                impatto=venue["impatto"], raggio_km=venue["raggio_km"],
+                fonte="bolognafiere.it",
+            ))
+            if len(eventi) >= 10:
+                break
+    except Exception as exc:
+        log.warning("Fiera Bologna scraping error: %s", exc)
+    return eventi
+
+
+# ---------------------------------------------------------------------------
+# Refresh reale
 # ---------------------------------------------------------------------------
 
 async def refresh_eventi() -> int:
     """
-    Placeholder per scraping reale (bolognfc.com, bolognafiere.it, ecc.).
-    Attualmente è un no-op; ritorna 0 nuovi eventi.
+    Scarica eventi reali da Bologna FC e Fiera Bologna.
+    Ritorna il numero di nuovi eventi inseriti.
     """
-    log.debug("refresh_eventi: scraping non ancora implementato")
-    return 0
+    # Elimina eventi di test scaduti (fonte="test")
+    now = datetime.now(timezone.utc)
+    with connect() as conn:
+        conn.execute(
+            "DELETE FROM eventi WHERE fonte='test' AND data_fine < ?",
+            (now.isoformat(),)
+        )
+
+    # Scraping reale
+    bologna_fc = await _fetch_bologna_fc()
+    fiera = await _fetch_fiera_bologna()
+    nuovi = bologna_fc + fiera
+
+    if nuovi:
+        _save_events(nuovi)
+        log.info("refresh_eventi: %d nuovi eventi (BFC=%d, Fiera=%d)",
+                 len(nuovi), len(bologna_fc), len(fiera))
+
+    return len(nuovi)

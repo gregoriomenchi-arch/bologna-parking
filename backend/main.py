@@ -8,7 +8,7 @@ import logging
 import httpx
 import logging.config
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
@@ -28,6 +28,7 @@ from eventi import (
     seed_test_events,
     get_upcoming_events,
     get_active_and_soon,
+    refresh_eventi,
 )
 from traffic_collector import (
     init_traffic_db,
@@ -71,6 +72,8 @@ _sched_last_error:   str | None = None
 
 COLLECT_INTERVAL = 600  # 10 minuti
 
+_last_eventi_refresh: datetime = datetime.now(timezone.utc) - timedelta(hours=7)
+
 
 # ---------------------------------------------------------------------------
 # Background task raccolta dati
@@ -78,7 +81,7 @@ COLLECT_INTERVAL = 600  # 10 minuti
 
 async def _collect_loop() -> None:
     """Raccoglie dati SostaBo ogni 10 minuti e li salva nel DB."""
-    global _sched_cycle, _sched_total_saved, _sched_last_run, _sched_last_count, _sched_last_error
+    global _sched_cycle, _sched_total_saved, _sched_last_run, _sched_last_count, _sched_last_error, _last_eventi_refresh
 
     log.info("Scheduler avviato — intervallo %d s", COLLECT_INTERVAL)
 
@@ -109,6 +112,12 @@ async def _collect_loop() -> None:
                     "[scheduler ciclo %d] %s — traffico: %d punti salvati",
                     _sched_cycle, ts_str, n_traffic,
                 )
+
+            # Refresh eventi reali ogni 6 ore
+            if (datetime.now(timezone.utc) - _last_eventi_refresh).total_seconds() > 6 * 3600:
+                n = await refresh_eventi()
+                _last_eventi_refresh = datetime.now(timezone.utc)
+                log.info("Eventi refresh: %d nuovi", n)
 
         except Exception as exc:
             _sched_last_error = str(exc)
