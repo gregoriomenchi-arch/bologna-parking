@@ -275,29 +275,37 @@
     };
 
     // Score medio per nome strada → segmenti della stessa via hanno stesso colore
-    const nameSum = {}, nameCount = {};
-    for (const f of geojsonFiltrato.features) {
-      const n = f.properties.name;
-      const s = f.properties.score ?? 50;
-      if (n) { nameSum[n] = (nameSum[n] || 0) + s; nameCount[n] = (nameCount[n] || 0) + 1; }
-    }
-    const nameScore = {};
-    for (const n in nameSum) nameScore[n] = nameSum[n] / nameCount[n];
+    const nameToScore = {};
+    (geojsonFiltrato.features || []).forEach(f => {
+      const nome = f.properties.name;
+      const score = f.properties.score;
+      if (nome && score !== undefined) {
+        if (!nameToScore[nome]) nameToScore[nome] = [];
+        nameToScore[nome].push(score);
+      }
+    });
+    const nameAvgScore = {};
+    Object.entries(nameToScore).forEach(([nome, scores]) => {
+      nameAvgScore[nome] = scores.reduce((a, b) => a + b, 0) / scores.length;
+    });
 
     L.geoJSON(geojsonFiltrato, {
       style: feature => {
-        const n     = feature.properties.name;
-        const score = n && nameScore[n] != null ? nameScore[n] : (feature.properties.score ?? 50);
-        const hw    = feature.properties.highway;
-        const weight = hw === "primary"   ? 6
-                     : hw === "secondary" ? 4
-                     : 2.5;
-        return { color: scoreToColor(score), weight, opacity: 0.85 };
+        const nome  = feature.properties.name;
+        const score = nome && nameAvgScore[nome] !== undefined
+          ? nameAvgScore[nome]
+          : feature.properties.score ?? 50;
+        const hw = feature.properties.highway;
+        return {
+          color:   scoreToColor(score),
+          weight:  hw === 'primary' ? 4 : hw === 'secondary' ? 3 : 2,
+          opacity: 0.85,
+        };
       },
       onEachFeature: (feature, layer) => {
         const p     = feature.properties;
         const n     = p.name;
-        const score = Math.round(n && nameScore[n] != null ? nameScore[n] : (p.score ?? 50));
+        const score = Math.round(n && nameAvgScore[n] !== undefined ? nameAvgScore[n] : (p.score ?? 50));
         const color = scoreToColor(score);
         const probLabel = score >= 70 ? "Alta" : score >= 40 ? "Media" : "Bassa";
         layer.bindPopup(`
