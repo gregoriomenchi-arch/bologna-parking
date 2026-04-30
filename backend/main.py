@@ -335,6 +335,14 @@ async def eventi_attivi(entro_ore: int = Query(default=2, ge=1, le=24)):
     return get_active_and_soon(within_hours=entro_ore)
 
 
+@app.get("/eventi/refresh", tags=["Eventi"])
+async def forza_refresh_eventi():
+    """Forza il refresh immediato degli eventi reali."""
+    n = await refresh_eventi()
+    eventi = get_upcoming_events(hours=168)  # prossimi 7 giorni
+    return {"nuovi_inseriti": n, "totale_prossimi": len(eventi), "eventi": eventi}
+
+
 @app.get("/osm/stats", tags=["OSM"])
 async def osm_stats():
     """
