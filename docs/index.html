@@ -256,57 +256,62 @@
 
   // ── Render strade (condiviso tra statico e live) ─────────────────────
   function renderStrade(geojson, source) {
-    stradeLayer.clearLayers();
-    const srcLabel = source === "live" ? "dati live" : "stima statica";
+    try {
+      stradeLayer.clearLayers();
+      const srcLabel = source === "live" ? "dati live" : "stima statica";
 
-    const ESCLUDI_HIGHWAY = new Set([
-      'motorway','motorway_link','trunk','trunk_link',
-      'footway','cycleway','path','steps','pedestrian',
-      'track','service'
-    ]);
+      const ESCLUDI_HIGHWAY = new Set([
+        'motorway','motorway_link','trunk','trunk_link',
+        'footway','cycleway','path','steps','pedestrian',
+        'track','service'
+      ]);
 
-    const geojsonFiltrato = {
-      ...geojson,
-      features: (geojson.features || []).filter(f => {
-        const hw   = f.properties.highway;
-        const nome = f.properties.name;
-        return nome && nome.trim() !== '' && !ESCLUDI_HIGHWAY.has(hw);
-      })
-    };
+      const geojsonFiltrato = {
+        ...geojson,
+        features: (geojson.features || []).filter(f => {
+          const hw   = f.properties.highway;
+          const nome = f.properties.name;
+          return nome && nome.trim() !== '' && !ESCLUDI_HIGHWAY.has(hw);
+        })
+      };
 
-    L.geoJSON(geojsonFiltrato, {
-      style: feature => {
-        const score = feature.properties.score ?? 50;
-        const hw    = feature.properties.highway;
-        return {
-          color:   scoreToColor(score),
-          weight:  hw === 'primary' ? 4 : hw === 'secondary' ? 3 : 2,
-          opacity: 0.85,
-        };
-      },
-      onEachFeature: (feature, layer) => {
-        const p     = feature.properties;
-        const n     = p.name;
-        const score = Math.round(p.score ?? 50);
-        const color = scoreToColor(score);
-        const probLabel = score >= 70 ? "Alta" : score >= 40 ? "Media" : "Bassa";
-        layer.bindPopup(`
-          <div class="popup-name">${n || "Strada"}</div>
-          <div class="popup-row">
-            Tipo: <strong>${p.highway}</strong><br>
-            Score: <strong>${score}/100</strong>
-            <span class="popup-badge" style="background:${color};color:#fff">
-              ${probLabel} probabilità
-            </span>
-          </div>
-          ${_fattoriHtml(p.fattori)}
-          <div class="popup-row" style="margin-top:5px;color:#888;font-size:.7rem">
-            Fonte: ${srcLabel}
-          </div>
-        `);
-      },
-    }).addTo(stradeLayer);
-    console.log(`[Bologna Parking] strade (${source}): ${geojson.features?.length}`);
+      console.log(`[Bologna Parking] strade (${source}): totale=${geojson.features?.length}, dopo filtro=${geojsonFiltrato.features.length}`);
+
+      L.geoJSON(geojsonFiltrato, {
+        style: feature => {
+          const score = feature.properties.score ?? 50;
+          const hw    = feature.properties.highway;
+          return {
+            color:   scoreToColor(score),
+            weight:  hw === 'primary' ? 4 : hw === 'secondary' ? 3 : 2,
+            opacity: 0.85,
+          };
+        },
+        onEachFeature: (feature, layer) => {
+          const p     = feature.properties;
+          const n     = p.name;
+          const score = Math.round(p.score ?? 50);
+          const color = scoreToColor(score);
+          const probLabel = score >= 70 ? "Alta" : score >= 40 ? "Media" : "Bassa";
+          layer.bindPopup(`
+            <div class="popup-name">${n || "Strada"}</div>
+            <div class="popup-row">
+              Tipo: <strong>${p.highway}</strong><br>
+              Score: <strong>${score}/100</strong>
+              <span class="popup-badge" style="background:${color};color:#fff">
+                ${probLabel} probabilità
+              </span>
+            </div>
+            ${_fattoriHtml(p.fattori)}
+            <div class="popup-row" style="margin-top:5px;color:#888;font-size:.7rem">
+              Fonte: ${srcLabel}
+            </div>
+          `);
+        },
+      }).addTo(stradeLayer);
+    } catch (err) {
+      console.error("[Bologna Parking] renderStrade() errore:", err);
+    }
   }
 
   // ── Strade colorate ───────────────────────────────────────────────────
@@ -330,12 +335,12 @@
     // 2. Backend live (score aggiornati) — aggiorna silenziosamente se disponibile
     try {
       const res = await fetch(`${API}/strade/probabilita`,
-                              { signal: AbortSignal.timeout(5000) });
+                              { signal: AbortSignal.timeout(25000) });
       if (res.ok) {
         const geojson = await res.json();
         renderStrade(geojson, "live");
       }
-    } catch (_) { /* backend opzionale */ }
+    } catch (err) { console.warn("[Bologna Parking] strade live non disponibili:", err.message); }
   }
 
   // ── Helper render marker (riusato per live e statici) ────────────────
