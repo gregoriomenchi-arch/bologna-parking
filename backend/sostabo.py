@@ -298,6 +298,10 @@ _STATIC_PARCHEGGI_DEF: list[tuple] = [
     ("Parcheggio Salesiani",         "Via Mazzini",               44.5075, 11.3462, 300, 60, "struttura"),
     ("Parcheggio Piazzale Baldi",    "Piazzale Baldi",            44.5034, 11.3518, 200, 55, "struttura"),
     ("Piazzale Atleti Azzurri",      "Piazzale Atleti Azzurri",   44.5028, 11.3710, 350, 50, "struttura"),
+    ("Parcheggio Pontelungo",        "Via Pontelungo",            44.4912, 11.2934, 180, 45, "scambiatore"),
+    ("Parcheggio Via della Guardia", "Via della Guardia",         44.4889, 11.2978, 120, 40, "scambiatore"),
+    ("Parcheggio Giardini Margherita","Viale Gozzadini",          44.4821, 11.3512, 150, 50, "struttura"),
+    ("Parcheggio Piazza Trento e Trieste","Piazza Trento e Trieste",44.4923,11.3407, 200, 60, "struttura"),
 ]
 
 # Moltiplicatori orari per tipo di parcheggio

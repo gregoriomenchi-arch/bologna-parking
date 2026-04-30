@@ -274,28 +274,10 @@
       })
     };
 
-    // Score medio per nome strada → segmenti della stessa via hanno stesso colore
-    const nameToScore = {};
-    (geojsonFiltrato.features || []).forEach(f => {
-      const nome = f.properties.name;
-      const score = f.properties.score;
-      if (nome && score !== undefined) {
-        if (!nameToScore[nome]) nameToScore[nome] = [];
-        nameToScore[nome].push(score);
-      }
-    });
-    const nameAvgScore = {};
-    Object.entries(nameToScore).forEach(([nome, scores]) => {
-      nameAvgScore[nome] = scores.reduce((a, b) => a + b, 0) / scores.length;
-    });
-
     L.geoJSON(geojsonFiltrato, {
       style: feature => {
-        const nome  = feature.properties.name;
-        const score = nome && nameAvgScore[nome] !== undefined
-          ? nameAvgScore[nome]
-          : feature.properties.score ?? 50;
-        const hw = feature.properties.highway;
+        const score = feature.properties.score ?? 50;
+        const hw    = feature.properties.highway;
         return {
           color:   scoreToColor(score),
           weight:  hw === 'primary' ? 4 : hw === 'secondary' ? 3 : 2,
@@ -305,7 +287,7 @@
       onEachFeature: (feature, layer) => {
         const p     = feature.properties;
         const n     = p.name;
-        const score = Math.round(n && nameAvgScore[n] !== undefined ? nameAvgScore[n] : (p.score ?? 50));
+        const score = Math.round(p.score ?? 50);
         const color = scoreToColor(score);
         const probLabel = score >= 70 ? "Alta" : score >= 40 ? "Media" : "Bassa";
         layer.bindPopup(`
