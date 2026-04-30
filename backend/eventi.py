@@ -6,11 +6,14 @@ Fase futura:  refresh_eventi() chiamerà gli scraper reali (bolognfc.com, ecc.).
 """
 
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import httpx
 from pydantic import BaseModel
+
+FOOTBALL_DATA_KEY = os.environ.get("FOOTBALL_DATA_KEY", "")
 
 from db import connect
 
@@ -248,7 +251,11 @@ async def _fetch_bologna_fc() -> list[Evento]:
     """
     Scarica le prossime partite del Bologna FC da football-data.org.
     Team ID Bologna FC = 98, competizione Serie A = SA.
+    Richiede FOOTBALL_DATA_KEY impostata come variabile d'ambiente.
     """
+    if not FOOTBALL_DATA_KEY:
+        log.debug("FOOTBALL_DATA_KEY non impostata — skip Bologna FC scraping")
+        return []
     url = "https://api.football-data.org/v4/teams/98/matches"
     params = {"status": "SCHEDULED,LIVE", "limit": 10}
     venue = VENUES["Stadio Renato Dall'Ara"]
@@ -256,7 +263,7 @@ async def _fetch_bologna_fc() -> list[Evento]:
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(url, params=params,
-                                    headers={"X-Auth-Token": ""})
+                                    headers={"X-Auth-Token": FOOTBALL_DATA_KEY})
             if not resp.ok:
                 log.warning("football-data.org: %s", resp.status_code)
                 return []
@@ -288,41 +295,68 @@ async def _fetch_bologna_fc() -> list[Evento]:
 
 
 # ---------------------------------------------------------------------------
-# Scraper reale — Fiera di Bologna (HTML scraping)
+# Scraper reale — Fiera di Bologna (JSON API + fallback hardcoded)
 # ---------------------------------------------------------------------------
+
+# Aggiornare manualmente ogni stagione
+FIERE_PROGRAMMATE = [
+    {"nome": "Cersaie",    "start": "2026-09-22", "end": "2026-09-26"},
+    {"nome": "Cosmoprof",  "start": "2026-03-20", "end": "2026-03-23"},
+    {"nome": "Arte Fiera", "start": "2027-01-30", "end": "2027-02-02"},
+    {"nome": "Motor Show", "start": "2026-12-04", "end": "2026-12-13"},
+    {"nome": "Saie",       "start": "2026-10-08", "end": "2026-10-10"},
+    {"nome": "Marca",      "start": "2027-01-21", "end": "2027-01-22"},
+]
+
+
+def _fiere_fallback() -> list[Evento]:
+    venue = VENUES["Fiera di Bologna"]
+    now = datetime.now(timezone.utc)
+    eventi = []
+    for f in FIERE_PROGRAMMATE:
+        dt_start = datetime.fromisoformat(f["start"]).replace(tzinfo=timezone.utc)
+        dt_fine  = datetime.fromisoformat(f["end"]).replace(hour=22, tzinfo=timezone.utc)
+        if dt_fine < now:
+            continue
+        eventi.append(Evento(
+            nome=f["nome"],
+            venue="Fiera di Bologna",
+            data_inizio=dt_start,
+            data_fine=dt_fine,
+            lat=venue["lat"], lon=venue["lon"],
+            impatto=venue["impatto"], raggio_km=venue["raggio_km"],
+            fonte="bolognafiere.it-manual",
+        ))
+    return eventi
+
 
 async def _fetch_fiera_bologna() -> list[Evento]:
     """
-    Scarica le manifestazioni da Fiera Bologna via HTML pubblico.
+    Prova l'endpoint JSON pubblico di BolognaFiere; se non risponde usa il
+    fallback hardcoded FIERE_PROGRAMMATE.
     """
-    import re
-    url = "https://www.bolognafiere.it/it/manifestazioni.html"
+    url = "https://www.bolognafiere.it/it/api/manifestazioni.json"
     venue = VENUES["Fiera di Bologna"]
-    eventi = []
+    now = datetime.now(timezone.utc)
     try:
-        async with httpx.AsyncClient(timeout=10.0,
-                                     follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
             resp = await client.get(url, headers={
                 "User-Agent": "Mozilla/5.0 Bologna Parking App"
             })
-            if not resp.ok:
-                return []
-            html = resp.text
-
-        pattern = re.compile(
-            r'<h\d[^>]*>\s*([^<]{5,80})\s*</h\d>.*?'
-            r'(\d{2}/\d{2}/\d{4})\s*[–\-]\s*(\d{2}/\d{2}/\d{4})',
-            re.DOTALL
-        )
-        now = datetime.now(timezone.utc)
-        for m in pattern.finditer(html):
-            nome = m.group(1).strip()[:80]
+        if not resp.ok:
+            log.warning("bolognafiere.it JSON: %s — uso fallback", resp.status_code)
+            return _fiere_fallback()
+        items = resp.json() if isinstance(resp.json(), list) else resp.json().get("manifestazioni", [])
+        eventi = []
+        for item in items:
+            nome = (item.get("titolo") or item.get("nome") or "")[:80]
+            start_raw = item.get("data_inizio") or item.get("start") or ""
+            end_raw   = item.get("data_fine")   or item.get("end")   or ""
+            if not nome or not start_raw:
+                continue
             try:
-                dt_start = datetime.strptime(
-                    m.group(2), "%d/%m/%Y").replace(tzinfo=timezone.utc)
-                dt_fine = datetime.strptime(
-                    m.group(3), "%d/%m/%Y").replace(
-                    hour=22, tzinfo=timezone.utc)
+                dt_start = datetime.fromisoformat(start_raw).replace(tzinfo=timezone.utc)
+                dt_fine  = datetime.fromisoformat(end_raw).replace(tzinfo=timezone.utc) if end_raw else dt_start + timedelta(days=3)
             except ValueError:
                 continue
             if dt_fine < now:
@@ -338,9 +372,13 @@ async def _fetch_fiera_bologna() -> list[Evento]:
             ))
             if len(eventi) >= 10:
                 break
+        if not eventi:
+            log.info("bolognafiere.it JSON vuoto — uso fallback")
+            return _fiere_fallback()
+        return eventi
     except Exception as exc:
-        log.warning("Fiera Bologna scraping error: %s", exc)
-    return eventi
+        log.warning("Fiera Bologna scraping error: %s — uso fallback", exc)
+        return _fiere_fallback()
 
 
 # ---------------------------------------------------------------------------
