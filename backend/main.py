@@ -25,7 +25,6 @@ from historical_data import (
 )
 from eventi import (
     init_events_db,
-    seed_test_events,
     get_upcoming_events,
     get_active_and_soon,
     refresh_eventi,
@@ -166,8 +165,8 @@ async def lifespan(app: FastAPI):
     init_events_db()
     init_traffic_db()
     init_osm_db()
-    seed_test_events()               # eventi hardcoded per testing immediato
     _load_static_streets()           # sincrono, <50 ms, nessuna chiamata esterna
+    await refresh_eventi()           # popola subito il DB con eventi reali
     if TOMTOM_KEY:
         log.info("TomTom API key trovata — raccolta traffico abilitata")
     else:
