@@ -136,11 +136,62 @@
     .cond-ztl  { background: rgba(244, 67,54,.2);  color: #ef9a9a; }
 
     @media (max-width: 480px) {
-      header h1 { font-size: .95rem; }
-      #status { display: none; }
+      header { padding: 6px 10px; }
+      header h1 { font-size: .85rem; }
+      #status { font-size: .65rem; }
       .legend { font-size: .68rem; padding: 6px 8px; }
       .popup-name { font-size: .88rem; }
       .popup-row { font-size: .76rem; }
+    }
+
+    .legend-toggle {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      right: 10px;
+      z-index: 1001;
+      background: #1a2332;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+    @media (max-width: 600px) {
+      .legend-toggle { display: block; }
+      .legend {
+        display: none;
+        bottom: 60px;
+        right: 10px;
+        max-height: 60vh;
+        overflow-y: auto;
+      }
+      .legend.open { display: block; }
+      header h1 { font-size: .9rem; }
+      #status { font-size: .7rem; }
+      .leaflet-popup-content {
+        font-size: 15px;
+        min-width: 200px;
+      }
+      .popup-name { font-size: 1rem; font-weight: 700; }
+    }
+
+    .btn-gps {
+      position: fixed;
+      bottom: 20px;
+      left: 10px;
+      z-index: 1001;
+      background: #1a2332;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
     }
   </style>
 </head>
@@ -161,6 +212,8 @@
 <div id="event-banner"></div>
 <div id="map"></div>
 <div id="loading-streets">⏳ Caricamento strade…</div>
+<button class="legend-toggle" onclick="toggleLegend()">⋮ Legenda</button>
+<button class="btn-gps" onclick="locateMe()" title="La mia posizione">📍</button>
 
 <script>
   // ── Configurazione ────────────────────────────────────────────────────
@@ -279,11 +332,14 @@
 
       const geoLayer = L.geoJSON(geojsonFiltrato, {
         style: feature => {
-          const score = feature.properties.score ?? 50;
-          const hw    = feature.properties.highway;
+          const score    = feature.properties.score ?? 50;
+          const hw       = feature.properties.highway;
+          const isMobile = window.innerWidth < 600;
           return {
             color:   scoreToColor(score),
-            weight:  hw === 'primary' ? 4 : hw === 'secondary' ? 3 : 2,
+            weight:  isMobile
+              ? (hw === 'primary' ? 6 : hw === 'secondary' ? 5 : 4)
+              : (hw === 'primary' ? 4 : hw === 'secondary' ? 3 : 2),
             opacity: 0.85,
           };
         },
@@ -596,6 +652,17 @@
   setInterval(caricaParcheggi, 60_000);
   setInterval(caricaEventi, 5 * 60 * 1000);
   setInterval(aggiornaBannerCondizioni, 10 * 60 * 1000);
+
+  function toggleLegend() {
+    document.querySelector('.legend').classList.toggle('open');
+  }
+
+  function locateMe() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(pos => {
+      map.setView([pos.coords.latitude, pos.coords.longitude], 16);
+    }, () => alert('Posizione non disponibile'));
+  }
 </script>
 </body>
 </html>
