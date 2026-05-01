@@ -144,58 +144,37 @@
       .popup-row { font-size: .76rem; }
     }
 
-    .legend-toggle {
-      display: none;
-      position: fixed;
-      bottom: 20px;
-      right: 10px;
-      z-index: 1001;
-      background: #1a2332;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 8px 14px;
-      font-size: 13px;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-    }
-    @media (max-width: 600px) {
-      .legend-toggle { display: block; }
-      .legend {
-        display: none;
-        bottom: 60px;
-        right: 10px;
-        max-height: 60vh;
-        overflow-y: auto;
-      }
-      .legend.open { display: block; }
-      header h1 { font-size: .9rem; }
-      #status { font-size: .7rem; }
-      .leaflet-popup-content {
-        font-size: 15px;
-        min-width: 200px;
-      }
-      .popup-name { font-size: 1rem; font-weight: 700; }
-    }
-
-    .btn-gps {
-      position: fixed;
-      bottom: 20px;
-      left: 10px;
-      z-index: 1001;
-      background: #1a2332;
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 44px;
-      height: 44px;
-      font-size: 20px;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-    }
+  </style>
+  <style>
+  .btn-gps {
+    position: fixed; bottom: 24px; left: 12px;
+    z-index: 1001; background: #16213e; color: white;
+    border: 2px solid rgba(255,255,255,.2); border-radius: 50%;
+    width: 48px; height: 48px; font-size: 22px;
+    cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.5);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .btn-legend-toggle {
+    position: fixed; bottom: 24px; right: 12px;
+    z-index: 1002; background: #16213e; color: #eee;
+    border: 2px solid rgba(255,255,255,.2); border-radius: 24px;
+    padding: 10px 16px; font-size: 13px; font-weight: 600;
+    cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.5);
+    display: none;
+  }
+  @media (max-width: 600px) {
+    .btn-legend-toggle { display: flex; align-items: center; gap: 6px; }
+    .legend { display: none !important; }
+    .legend.mobile-open { display: block !important; }
+    header h1 { font-size: .85rem; }
+    #status { font-size: .65rem; }
+    .event-banner-item { font-size: .78rem; padding: 7px 12px; }
+  }
   </style>
 </head>
 <body>
+<button class="btn-gps" onclick="locateMe()" title="La mia posizione">📍</button>
+<button class="btn-legend-toggle" onclick="toggleLegend()">⋮ Legenda</button>
 
 <header>
   <h1>🅿 Bologna Parking</h1>
@@ -212,8 +191,6 @@
 <div id="event-banner"></div>
 <div id="map"></div>
 <div id="loading-streets">⏳ Caricamento strade…</div>
-<button class="legend-toggle" onclick="toggleLegend()">⋮ Legenda</button>
-<button class="btn-gps" onclick="locateMe()" title="La mia posizione">📍</button>
 
 <script>
   // ── Configurazione ────────────────────────────────────────────────────
@@ -228,10 +205,11 @@
   }).addTo(map);
 
   // ── Legenda ───────────────────────────────────────────────────────────
+  let legendDiv = null;
   const legend = L.control({ position: "bottomright" });
   legend.onAdd = () => {
-    const div = L.DomUtil.create("div", "legend");
-    div.innerHTML = `
+    legendDiv = L.DomUtil.create("div", "legend");
+    legendDiv.innerHTML = `
       <strong>Probabilità parcheggio</strong><br>
       <span class="legend-line" style="background:#4caf50"></span>alta (&gt;70)<br>
       <span class="legend-line" style="background:#ffeb3b"></span>media (40–70)<br>
@@ -250,7 +228,7 @@
       <span style="display:inline-block;width:14px;height:14px;background:#2e7d32;border-radius:3px;margin-right:6px;vertical-align:middle"></span>scambiatore<br>
       <span style="display:inline-block;width:14px;height:14px;background:#6a1b9a;border-radius:3px;margin-right:6px;vertical-align:middle"></span>raso/altro
     `;
-    return div;
+    return legendDiv;
   };
   legend.addTo(map);
 
@@ -337,9 +315,9 @@
           const isMobile = window.innerWidth < 600;
           return {
             color:   scoreToColor(score),
-            weight:  isMobile
-              ? (hw === 'primary' ? 6 : hw === 'secondary' ? 5 : 4)
-              : (hw === 'primary' ? 4 : hw === 'secondary' ? 3 : 2),
+            weight: hw === "primary"   ? (isMobile ? 7 : 6)
+                : hw === "secondary" ? (isMobile ? 5 : 4)
+                : (isMobile ? 3.5 : 2.5),
             opacity: 0.85,
           };
         },
@@ -653,15 +631,16 @@
   setInterval(caricaEventi, 5 * 60 * 1000);
   setInterval(aggiornaBannerCondizioni, 10 * 60 * 1000);
 
-  function toggleLegend() {
-    document.querySelector('.legend').classList.toggle('open');
+  function locateMe() {
+    if (!navigator.geolocation) { alert('GPS non disponibile'); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => map.setView([pos.coords.latitude, pos.coords.longitude], 16),
+      () => alert('Impossibile ottenere la posizione')
+    );
   }
 
-  function locateMe() {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(pos => {
-      map.setView([pos.coords.latitude, pos.coords.longitude], 16);
-    }, () => alert('Posizione non disponibile'));
+  function toggleLegend() {
+    if (legendDiv) legendDiv.classList.toggle('mobile-open');
   }
 </script>
 </body>
