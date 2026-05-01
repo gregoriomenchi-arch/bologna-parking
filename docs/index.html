@@ -277,7 +277,7 @@
 
       console.log(`[Bologna Parking] strade (${source}): totale=${geojson.features?.length}, dopo filtro=${geojsonFiltrato.features.length}`);
 
-      L.geoJSON(geojsonFiltrato, {
+      const geoLayer = L.geoJSON(geojsonFiltrato, {
         style: feature => {
           const score = feature.properties.score ?? 50;
           const hw    = feature.properties.highway;
@@ -309,6 +309,8 @@
           `);
         },
       }).addTo(stradeLayer);
+      console.log("layer strade creato:", geoLayer);
+      console.log("features nel layer:", geoLayer.getLayers().length);
     } catch (err) {
       console.error("[Bologna Parking] renderStrade() errore:", err);
     }
