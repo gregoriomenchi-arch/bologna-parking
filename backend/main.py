@@ -500,56 +500,9 @@ async def probabilita_strade():
     """
     GeoJSON con score aggiornati in tempo reale.
     Integra: SostaBo live, storico DB, meteo, calendario UniBo, ZTL Sirio, eventi.
-    Solo le strade con zone di sosta (strisce blu) dal Comune di Bologna.
     """
     if not _streets_ready or not _streets_geojson or not _streets_geojson["features"]:
         raise HTTPException(status_code=503, detail="Strade non disponibili")
-
-    # Scarica le zone sosta dal Comune per filtrare le strade rilevanti
-    nomi_sosta: set[str] = set()
-    try:
-        sosta_url = (
-            "https://opendata.comune.bologna.it/api/explore/v2.1"
-            "/catalog/datasets/stradario-generale-al-25nov2022"
-            "/records?limit=100"
-        )
-        offset = 0
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            while True:
-                resp = await client.get(sosta_url + f"&offset={offset}")
-                data = resp.json()
-                records = data.get("results", [])
-                if not records:
-                    break
-                for r in records:
-                    descr = r.get("descr", "")
-                    if "(" in descr:
-                        nome_raw, tipo_raw = descr.split("(", 1)
-                        tipo = tipo_raw.rstrip(")").strip().lower()
-                        nome = nome_raw.strip().lower()
-                        nomi_sosta.add(f"{tipo} {nome}".strip())
-                    elif descr:
-                        nomi_sosta.add(descr.lower().strip())
-                offset += 100
-                if offset >= data.get("total_count", 0):
-                    break
-    except Exception:
-        nomi_sosta = set()  # fallback: mostra tutte le strade
-
-    # Filtra il GeoJSON tenendo solo le strade con zone di sosta
-    if nomi_sosta:
-        _ESCLUDI_HW = {
-            'motorway', 'motorway_link', 'trunk', 'trunk_link',
-            'footway', 'cycleway', 'path', 'steps', 'pedestrian', 'track',
-        }
-        features_filtrate = [
-            f for f in _streets_geojson.get("features", [])
-            if f["properties"].get("name", "").lower().strip() in nomi_sosta
-            and f["properties"].get("highway", "") not in _ESCLUDI_HW
-        ]
-        geojson_filtrato = {"type": "FeatureCollection", "features": features_filtrate}
-    else:
-        geojson_filtrato = _streets_geojson
 
     # Fetch parallelo: SostaBo live + meteo (entrambi I/O bound)
     live_task  = asyncio.create_task(_safe_sostabo())
@@ -562,7 +515,7 @@ async def probabilita_strade():
     esami         = is_sessione_esami()
 
     return compute_street_scores(
-        geojson_filtrato, live, [],
+        _streets_geojson, live, [],
         eventi=eventi_attivi,
         pioggia=meteo.pioggia if meteo else False,
         unibo_lezioni=lezioni,
