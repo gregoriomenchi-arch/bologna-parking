@@ -23,6 +23,7 @@ from historical_data import (
     compute_street_scores,
     compute_single_street_score,
 )
+from db import connect
 from eventi import (
     init_events_db,
     get_upcoming_events,
@@ -340,6 +341,16 @@ async def forza_refresh_eventi():
     n = await refresh_eventi()
     eventi = get_upcoming_events(hours=168)  # prossimi 7 giorni
     return {"nuovi_inseriti": n, "totale_prossimi": len(eventi), "eventi": eventi}
+
+
+@app.get("/eventi/cleanup-test", tags=["Eventi"])
+async def cleanup_test_eventi():
+    """Rimuove tutti gli eventi con fonte='test' dal DB."""
+    with connect() as conn:
+        deleted = conn.execute(
+            "DELETE FROM eventi WHERE fonte = 'test'"
+        ).rowcount
+    return {"eliminati": deleted}
 
 
 @app.get("/osm/stats", tags=["OSM"])
