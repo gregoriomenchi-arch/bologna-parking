@@ -120,14 +120,16 @@ def get_upcoming_events(hours: int = 48) -> list[dict]:
     """Restituisce gli eventi che iniziano nelle prossime `hours` ore."""
     now   = datetime.now(timezone.utc)
     until = now + timedelta(hours=hours)
+    now_s   = now.isoformat()[:19]
+    until_s = until.isoformat()[:19]
     with connect() as conn:
         rows = conn.execute(
             """SELECT id, nome, venue, data_inizio, data_fine,
                       lat, lon, impatto, raggio_km, fonte
                FROM eventi
-               WHERE data_inizio BETWEEN ? AND ?
+               WHERE SUBSTR(data_inizio, 1, 19) BETWEEN ? AND ?
                ORDER BY data_inizio""",
-            (now.isoformat(), until.isoformat()),
+            (now_s, until_s),
         ).fetchall()
     return [_row_to_dict(r) for r in rows]
 
@@ -140,8 +142,8 @@ def get_active_and_soon(within_hours: int = 2) -> list[dict]:
     """
     now    = datetime.now(timezone.utc)
     cutoff = now + timedelta(hours=within_hours)
-    now_s  = now.isoformat()
-    cut_s  = cutoff.isoformat()
+    now_s  = now.isoformat()[:19]
+    cut_s  = cutoff.isoformat()[:19]
     with connect() as conn:
         rows = conn.execute(
             """
@@ -149,8 +151,8 @@ def get_active_and_soon(within_hours: int = 2) -> list[dict]:
                    lat, lon, impatto, raggio_km, fonte
             FROM eventi
             WHERE
-              (data_inizio <= ? AND (data_fine IS NULL OR data_fine >= ?))
-              OR (data_inizio > ? AND data_inizio <= ?)
+              (SUBSTR(data_inizio, 1, 19) <= ? AND (data_fine IS NULL OR SUBSTR(data_fine, 1, 19) >= ?))
+              OR (SUBSTR(data_inizio, 1, 19) > ? AND SUBSTR(data_inizio, 1, 19) <= ?)
             ORDER BY data_inizio
             """,
             (now_s, now_s, now_s, cut_s),
