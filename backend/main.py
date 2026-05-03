@@ -367,10 +367,13 @@ async def debug_eventi():
 async def cleanup_test_eventi():
     from db import connect
     with connect() as conn:
-        rows_before = conn.execute("SELECT COUNT(*) FROM eventi").fetchone()[0]
-        conn.execute("DELETE FROM eventi WHERE fonte = 'test' OR nome LIKE '%Milan%'")
-        rows_after = conn.execute("SELECT COUNT(*) FROM eventi").fetchone()[0]
-    return {"eliminati": rows_before - rows_after}
+        before = conn.execute("SELECT COUNT(*) FROM eventi").fetchone()[0]
+        conn.execute(
+            "DELETE FROM eventi WHERE fonte = ? OR nome LIKE ?",
+            ("test", "%Milan%")
+        )
+        after = conn.execute("SELECT COUNT(*) FROM eventi").fetchone()[0]
+    return {"eliminati": before - after}
 
 
 @app.get("/osm/stats", tags=["OSM"])
