@@ -6,14 +6,12 @@ Fase futura:  refresh_eventi() chiamerà gli scraper reali (bolognfc.com, ecc.).
 """
 
 import logging
-import os
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import httpx
 from pydantic import BaseModel
-
-FOOTBALL_DATA_KEY = os.environ.get("FOOTBALL_DATA_KEY", "")
 
 from db import connect
 
@@ -170,44 +168,86 @@ def _row_to_dict(r: tuple) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Scraper reale — Bologna FC (football-data.org, free tier)
+# Scraper reale — Bologna FC (feed iCal bolognfc.com)
 # ---------------------------------------------------------------------------
 
 async def _fetch_bologna_fc() -> list[Evento]:
     """
-    Scarica le prossime partite del Bologna FC da football-data.org.
-    Team ID Bologna FC = 84, competizione Serie A = SA.
-    Richiede FOOTBALL_DATA_KEY impostata come variabile d'ambiente.
+    Scarica le partite del Bologna FC dal feed iCal ufficiale.
+    Filtra solo le partite in casa future.
     """
-    if not FOOTBALL_DATA_KEY:
-        log.warning("FOOTBALL_DATA_KEY non impostata")
-        return []
-    url = "https://api.football-data.org/v4/teams/84/matches"
-    params = {"limit": 10}
+    url = "https://www.bolognfc.com/it/calendario-partite/?ical=1"
     venue = VENUES["Stadio Renato Dall'Ara"]
     eventi = []
-    now = datetime.now(timezone.utc)
+
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(url, params=params,
-                                    headers={"X-Auth-Token": FOOTBALL_DATA_KEY})
+        async with httpx.AsyncClient(timeout=10.0,
+                                      follow_redirects=True) as client:
+            resp = await client.get(url, headers={
+                "User-Agent": "Mozilla/5.0 Bologna Parking App"
+            })
             if resp.status_code != 200:
-                log.warning("football-data.org: %s", resp.status_code)
+                log.warning("Bologna FC iCal: %s", resp.status_code)
                 return []
-            data = resp.json()
-        for match in data.get("matches", []):
-            utc_date = match.get("utcDate", "")
-            if not utc_date:
+
+            testo = resp.text
+
+        now = datetime.now(timezone.utc)
+
+        eventi_raw = re.findall(
+            r'BEGIN:VEVENT(.*?)END:VEVENT', testo, re.DOTALL
+        )
+
+        for blocco in eventi_raw:
+            summary  = re.search(r'SUMMARY:(.+)', blocco)
+            dtstart  = re.search(r'DTSTART[^:]*:(\d+T?\d*Z?)', blocco)
+            dtend    = re.search(r'DTEND[^:]*:(\d+T?\d*Z?)', blocco)
+            location = re.search(r'LOCATION:(.+)', blocco)
+
+            if not summary or not dtstart:
                 continue
-            dt_start = datetime.fromisoformat(utc_date.replace("Z", "+00:00"))
+
+            nome = summary.group(1).strip()
+            loc  = location.group(1).strip() if location else ""
+
+            # Solo partite in casa
+            if "dall" not in loc.lower() and "bologna" not in loc.lower():
+                parti = nome.split(" - ")
+                if len(parti) == 2:
+                    if "bologna" not in parti[0].strip().lower():
+                        continue
+                elif " vs " in nome.lower():
+                    if "bologna" not in nome.lower().split(" vs ")[0].strip():
+                        continue
+
+            try:
+                ds = dtstart.group(1)
+                if "T" in ds:
+                    dt_start = datetime.strptime(
+                        ds, "%Y%m%dT%H%M%SZ"
+                    ).replace(tzinfo=timezone.utc)
+                else:
+                    dt_start = datetime.strptime(
+                        ds, "%Y%m%d"
+                    ).replace(tzinfo=timezone.utc, hour=15)
+
+                if dtend:
+                    de = dtend.group(1)
+                    if "T" in de:
+                        dt_fine = datetime.strptime(
+                            de, "%Y%m%dT%H%M%SZ"
+                        ).replace(tzinfo=timezone.utc)
+                    else:
+                        dt_fine = dt_start + timedelta(hours=2)
+                else:
+                    dt_fine = dt_start + timedelta(hours=2)
+
+            except ValueError:
+                continue
+
             if dt_start < now:
                 continue
-            if match.get("homeTeam", {}).get("id") != 84:
-                continue
-            dt_fine = dt_start + timedelta(hours=2)
-            home = match.get("homeTeam", {}).get("shortName", "")
-            away = match.get("awayTeam", {}).get("shortName", "")
-            nome = f"{home} vs {away}"
+
             eventi.append(Evento(
                 nome=nome,
                 venue="Stadio Renato Dall'Ara",
@@ -215,10 +255,14 @@ async def _fetch_bologna_fc() -> list[Evento]:
                 data_fine=dt_fine,
                 lat=venue["lat"], lon=venue["lon"],
                 impatto=venue["impatto"], raggio_km=venue["raggio_km"],
-                fonte="football-data.org",
+                fonte="bolognfc.com",
             ))
+
+        log.info("Bologna FC iCal: trovate %d partite in casa future", len(eventi))
+
     except Exception as exc:
-        log.warning("Bologna FC scraping error: %s", exc)
+        log.warning("Bologna FC iCal error: %s", exc)
+
     return eventi
 
 
