@@ -182,7 +182,7 @@ async def _fetch_bologna_fc() -> list[Evento]:
     if not FOOTBALL_DATA_KEY:
         log.warning("FOOTBALL_DATA_KEY non impostata")
         return []
-    url = "https://api.football-data.org/v4/teams/98/matches"
+    url = "https://api.football-data.org/v4/teams/84/matches"
     params = {"status": "SCHEDULED,LIVE", "limit": 10}
     venue = VENUES["Stadio Renato Dall'Ara"]
     eventi = []
@@ -204,7 +204,7 @@ async def _fetch_bologna_fc() -> list[Evento]:
             away = match.get("awayTeam", {}).get("shortName", "")
             nome = f"{home} vs {away}"
             # solo partite in casa
-            if match.get("homeTeam", {}).get("id") != 98:
+            if match.get("homeTeam", {}).get("id") != 84:
                 continue
             eventi.append(Evento(
                 nome=nome,
