@@ -178,7 +178,7 @@ async def _fetch_bologna_fc() -> list[Evento]:
     Richiede FOOTBALL_DATA_KEY impostata come variabile d'ambiente.
     """
     if not FOOTBALL_DATA_KEY:
-        log.debug("FOOTBALL_DATA_KEY non impostata — skip Bologna FC scraping")
+        log.warning("FOOTBALL_DATA_KEY non impostata")
         return []
     url = "https://api.football-data.org/v4/teams/98/matches"
     params = {"status": "SCHEDULED,LIVE", "limit": 10}
@@ -188,7 +188,7 @@ async def _fetch_bologna_fc() -> list[Evento]:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(url, params=params,
                                     headers={"X-Auth-Token": FOOTBALL_DATA_KEY})
-            if not resp.ok:
+            if resp.status_code != 200:
                 log.warning("football-data.org: %s", resp.status_code)
                 return []
             data = resp.json()
@@ -267,9 +267,10 @@ async def _fetch_fiera_bologna() -> list[Evento]:
             resp = await client.get(url, headers={
                 "User-Agent": "Mozilla/5.0 Bologna Parking App"
             })
-        if not resp.ok:
+        if resp.status_code not in (200, 301, 302):
             log.warning("bolognafiere.it JSON: %s — uso fallback", resp.status_code)
-            return _fiere_fallback()
+            # Se l'API non esiste, usa direttamente il fallback
+            raise Exception("API non disponibile, uso fallback")
         items = resp.json() if isinstance(resp.json(), list) else resp.json().get("manifestazioni", [])
         eventi = []
         for item in items:
