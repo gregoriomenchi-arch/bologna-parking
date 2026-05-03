@@ -343,6 +343,26 @@ async def forza_refresh_eventi():
     return {"nuovi_inseriti": n, "totale_prossimi": len(eventi), "eventi": eventi}
 
 
+@app.get("/eventi/debug", tags=["Eventi"])
+async def debug_eventi():
+    from db import connect
+    from datetime import datetime, timezone
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT id, nome, data_inizio, data_fine, fonte FROM eventi ORDER BY data_inizio"
+        ).fetchall()
+    now = datetime.now(timezone.utc).isoformat()
+    return {
+        "now_utc": now,
+        "totale": len(rows),
+        "eventi": [
+            {"id": r[0], "nome": r[1], "data_inizio": r[2],
+             "data_fine": r[3], "fonte": r[4]}
+            for r in rows
+        ]
+    }
+
+
 @app.get("/eventi/cleanup-test", tags=["Eventi"])
 async def cleanup_test_eventi():
     from db import connect
