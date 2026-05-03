@@ -345,13 +345,12 @@ async def forza_refresh_eventi():
 
 @app.get("/eventi/cleanup-test", tags=["Eventi"])
 async def cleanup_test_eventi():
-    from eventi import _save_events
     from db import connect
     with connect() as conn:
-        cur = conn.execute("DELETE FROM eventi WHERE fonte = 'test'")
-        deleted = cur.rowcount
-        conn.commit()
-    return {"eliminati": deleted}
+        rows = conn.execute("SELECT COUNT(*) FROM eventi WHERE fonte = 'test'").fetchone()
+        count = rows[0] if rows else 0
+        conn.execute("DELETE FROM eventi WHERE fonte = 'test'")
+    return {"eliminati": count}
 
 
 @app.get("/osm/stats", tags=["OSM"])
