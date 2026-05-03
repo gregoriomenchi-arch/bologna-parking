@@ -176,7 +176,7 @@ def _row_to_dict(r: tuple) -> dict:
 async def _fetch_bologna_fc() -> list[Evento]:
     """
     Scarica le prossime partite del Bologna FC da football-data.org.
-    Team ID Bologna FC = 98, competizione Serie A = SA.
+    Team ID Bologna FC = 84, competizione Serie A = SA.
     Richiede FOOTBALL_DATA_KEY impostata come variabile d'ambiente.
     """
     if not FOOTBALL_DATA_KEY:

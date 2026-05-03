@@ -367,9 +367,13 @@ async def debug_eventi():
 async def cleanup_test_eventi():
     from db import connect
     with connect() as conn:
-        rows = conn.execute("SELECT COUNT(*) FROM eventi WHERE fonte = 'test'").fetchone()
+        rows = conn.execute(
+            "SELECT COUNT(*) FROM eventi WHERE fonte = 'test' OR nome LIKE '%Milan%'"
+        ).fetchone()
         count = rows[0] if rows else 0
-        conn.execute("DELETE FROM eventi WHERE fonte = 'test'")
+        conn.execute(
+            "DELETE FROM eventi WHERE fonte = 'test' OR nome LIKE '%Milan%'"
+        )
     return {"eliminati": count}
 
 
