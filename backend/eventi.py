@@ -183,9 +183,10 @@ async def _fetch_bologna_fc() -> list[Evento]:
         log.warning("FOOTBALL_DATA_KEY non impostata")
         return []
     url = "https://api.football-data.org/v4/teams/84/matches"
-    params = {"status": "SCHEDULED,LIVE", "limit": 10}
+    params = {"limit": 10}
     venue = VENUES["Stadio Renato Dall'Ara"]
     eventi = []
+    now = datetime.now(timezone.utc)
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(url, params=params,
@@ -195,17 +196,18 @@ async def _fetch_bologna_fc() -> list[Evento]:
                 return []
             data = resp.json()
         for match in data.get("matches", []):
-            utc_date = match.get("utcDate")
+            utc_date = match.get("utcDate", "")
             if not utc_date:
                 continue
             dt_start = datetime.fromisoformat(utc_date.replace("Z", "+00:00"))
+            if dt_start < now:
+                continue
+            if match.get("homeTeam", {}).get("id") != 84:
+                continue
             dt_fine = dt_start + timedelta(hours=2)
             home = match.get("homeTeam", {}).get("shortName", "")
             away = match.get("awayTeam", {}).get("shortName", "")
             nome = f"{home} vs {away}"
-            # solo partite in casa
-            if match.get("homeTeam", {}).get("id") != 84:
-                continue
             eventi.append(Evento(
                 nome=nome,
                 venue="Stadio Renato Dall'Ara",
