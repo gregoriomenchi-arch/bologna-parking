@@ -173,80 +173,51 @@ def _row_to_dict(r: tuple) -> dict:
 
 async def _fetch_bologna_fc() -> list[Evento]:
     """
-    Scarica le partite del Bologna FC dal feed iCal ufficiale.
-    Filtra solo le partite in casa future.
+    Scarica prossime partite Bologna FC da TheSportsDB.
+    ID Bologna FC su TheSportsDB: 133591
+    Gratuita, no token richiesto.
     """
-    url = "https://www.bolognfc.com/it/calendario-partite/?ical=1"
+    url = "https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=133591"
     venue = VENUES["Stadio Renato Dall'Ara"]
     eventi = []
 
     try:
-        async with httpx.AsyncClient(timeout=10.0,
-                                      follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(url, headers={
                 "User-Agent": "Mozilla/5.0 Bologna Parking App"
             })
             if resp.status_code != 200:
-                log.warning("Bologna FC iCal: %s", resp.status_code)
+                log.warning("TheSportsDB: %s", resp.status_code)
                 return []
-
-            testo = resp.text
+            data = resp.json()
 
         now = datetime.now(timezone.utc)
 
-        eventi_raw = re.findall(
-            r'BEGIN:VEVENT(.*?)END:VEVENT', testo, re.DOTALL
-        )
-
-        for blocco in eventi_raw:
-            summary  = re.search(r'SUMMARY:(.+)', blocco)
-            dtstart  = re.search(r'DTSTART[^:]*:(\d+T?\d*Z?)', blocco)
-            dtend    = re.search(r'DTEND[^:]*:(\d+T?\d*Z?)', blocco)
-            location = re.search(r'LOCATION:(.+)', blocco)
-
-            if not summary or not dtstart:
+        for match in data.get("events") or []:
+            # Solo partite in casa del Bologna
+            home = match.get("strHomeTeam", "")
+            away = match.get("strAwayTeam", "")
+            if "Bologna" not in home:
                 continue
 
-            nome = summary.group(1).strip()
-            loc  = location.group(1).strip() if location else ""
-
-            # Solo partite in casa
-            if "dall" not in loc.lower() and "bologna" not in loc.lower():
-                parti = nome.split(" - ")
-                if len(parti) == 2:
-                    if "bologna" not in parti[0].strip().lower():
-                        continue
-                elif " vs " in nome.lower():
-                    if "bologna" not in nome.lower().split(" vs ")[0].strip():
-                        continue
+            # Data e ora
+            date_str = match.get("dateEvent", "")
+            time_str = match.get("strTime", "20:45:00")
+            if not date_str:
+                continue
 
             try:
-                ds = dtstart.group(1)
-                if "T" in ds:
-                    dt_start = datetime.strptime(
-                        ds, "%Y%m%dT%H%M%SZ"
-                    ).replace(tzinfo=timezone.utc)
-                else:
-                    dt_start = datetime.strptime(
-                        ds, "%Y%m%d"
-                    ).replace(tzinfo=timezone.utc, hour=15)
-
-                if dtend:
-                    de = dtend.group(1)
-                    if "T" in de:
-                        dt_fine = datetime.strptime(
-                            de, "%Y%m%dT%H%M%SZ"
-                        ).replace(tzinfo=timezone.utc)
-                    else:
-                        dt_fine = dt_start + timedelta(hours=2)
-                else:
-                    dt_fine = dt_start + timedelta(hours=2)
-
+                dt_str = f"{date_str}T{time_str or '20:45:00'}"
+                dt_start = datetime.fromisoformat(dt_str).replace(
+                    tzinfo=timezone.utc)
             except ValueError:
                 continue
 
             if dt_start < now:
                 continue
+
+            nome = f"{home} vs {away}"
+            dt_fine = dt_start + timedelta(hours=2)
 
             eventi.append(Evento(
                 nome=nome,
@@ -255,13 +226,13 @@ async def _fetch_bologna_fc() -> list[Evento]:
                 data_fine=dt_fine,
                 lat=venue["lat"], lon=venue["lon"],
                 impatto=venue["impatto"], raggio_km=venue["raggio_km"],
-                fonte="bolognfc.com",
+                fonte="thesportsdb.com",
             ))
 
-        log.info("Bologna FC iCal: trovate %d partite in casa future", len(eventi))
+        log.info("TheSportsDB: trovate %d partite in casa future", len(eventi))
 
     except Exception as exc:
-        log.warning("Bologna FC iCal error: %s", exc)
+        log.warning("TheSportsDB error: %s", exc)
 
     return eventi
 
