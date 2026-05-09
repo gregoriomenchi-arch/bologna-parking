@@ -144,6 +144,79 @@ def _traffic_ora_corrente() -> list[tuple[float, float, float]]:
     return [(float(r[0]), float(r[1]), float(r[2])) for r in rows]
 
 
+def _penalita_temporale(lat: float, lon: float) -> tuple[float, str]:
+    """
+    Penalità basata su fascia oraria e giorno della settimana,
+    calibrata sui pattern reali di parcheggio a Bologna.
+    Ritorna (penalità, descrizione).
+    """
+    now = datetime.now(timezone.utc)
+    # Converti in ora locale italiana (UTC+1 invernale, UTC+2 estiva)
+    # Approssimazione: Bologna è UTC+1/+2, usiamo +1 come base
+    ora_locale = (now.hour + 1) % 24
+    giorno = now.weekday()  # 0=lunedì, 6=domenica
+
+    is_feriale  = giorno < 5
+    is_sabato   = giorno == 5
+    is_domenica = giorno == 6
+
+    # Determina se la strada è in zona centrale (dentro o vicino ZTL)
+    from ztl import is_in_ztl, is_nel_buffer_ztl
+    in_centro = is_in_ztl(lat, lon) or is_nel_buffer_ztl(lat, lon)
+
+    # Pattern feriali
+    if is_feriale:
+        if 7 <= ora_locale <= 9:
+            # Picco mattutino: pendolari in arrivo
+            penalty = -25.0 if in_centro else -15.0
+            return penalty, "picco_mattutino"
+        elif 10 <= ora_locale <= 11:
+            penalty = -15.0 if in_centro else -8.0
+            return penalty, "mattina_alta"
+        elif 12 <= ora_locale <= 14:
+            # Ora di pranzo: molto difficile in centro
+            penalty = -20.0 if in_centro else -10.0
+            return penalty, "ora_pranzo"
+        elif 15 <= ora_locale <= 16:
+            penalty = -10.0 if in_centro else -5.0
+            return penalty, "pomeriggio"
+        elif 17 <= ora_locale <= 20:
+            # Picco serale: uscita uffici
+            penalty = -25.0 if in_centro else -15.0
+            return penalty, "picco_serale"
+        elif 21 <= ora_locale <= 23:
+            # Serata: ristoranti e locali
+            penalty = -15.0 if in_centro else -5.0
+            return penalty, "serata"
+        else:
+            # Notte/prima mattina: facile
+            penalty = 10.0 if not in_centro else 0.0
+            return penalty, "notte"
+
+    # Sabato
+    elif is_sabato:
+        if 9 <= ora_locale <= 20:
+            # Shopping: tutto il giorno difficile
+            penalty = -20.0 if in_centro else -10.0
+            return penalty, "sabato_shopping"
+        elif 20 <= ora_locale <= 23:
+            penalty = -15.0 if in_centro else -8.0
+            return penalty, "sabato_serata"
+        else:
+            return 5.0, "sabato_notte"
+
+    # Domenica: molto più facile
+    else:
+        if 10 <= ora_locale <= 13:
+            penalty = -10.0 if in_centro else -3.0
+            return penalty, "domenica_mattina"
+        elif 15 <= ora_locale <= 19:
+            penalty = -8.0 if in_centro else -3.0
+            return penalty, "domenica_pomeriggio"
+        else:
+            return 10.0, "domenica_libera"
+
+
 # ---------------------------------------------------------------------------
 # Cache strade Overpass
 # ---------------------------------------------------------------------------
@@ -242,7 +315,7 @@ def _base_score(
     if nearby_occ and nearby_hist:
         rt   = 100.0 - (sum(nearby_occ) / len(nearby_occ))
         hs   = 100.0 - (sum(nearby_hist) / len(nearby_hist))
-        base = 0.5 * rt + 0.3 * hs + (0.2 * traffic_score if traffic_score is not None else 0.0)
+        base = 0.4 * rt + 0.2 * hs + (0.4 * traffic_score if traffic_score is not None else 0.0)
         if traffic_score is None:
             base = 0.6 * rt + 0.4 * hs
     elif nearby_occ:
@@ -304,6 +377,12 @@ def _compute_score(
     if ztl_attiva_tra_30_min and is_nel_buffer_ztl(lat, lon):
         score -= 10.0
         factors["ztl_buffer_presto"] = -10.0
+
+    # Penalità temporale — basata su fascia oraria e giorno
+    pen_temp, tipo_temp = _penalita_temporale(lat, lon)
+    if pen_temp != 0:
+        score += pen_temp
+        factors[f"fascia_{tipo_temp}"] = pen_temp
 
     # Eventi attivi nelle vicinanze → -30
     if eventi:
