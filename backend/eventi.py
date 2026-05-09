@@ -177,7 +177,7 @@ async def _fetch_bologna_fc() -> list[Evento]:
     ID Bologna FC su TheSportsDB: 133591
     Gratuita, no token richiesto.
     """
-    url = "https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=133591"
+    url = "https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=134781"
     venue = VENUES["Stadio Renato Dall'Ara"]
     eventi = []
 
