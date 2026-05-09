@@ -227,10 +227,10 @@
       <span class="legend-dot" style="background:#ff9800"></span>50–80% — medio<br>
       <span class="legend-dot" style="background:#f44336"></span>&gt; 80% — pieno
       <hr style="border-color:#444;margin:4px 0">
-      <strong>Parcheggi Comune</strong><br>
-      <span style="display:inline-block;width:14px;height:14px;background:#1565c0;border-radius:3px;margin-right:6px;vertical-align:middle"></span>struttura<br>
-      <span style="display:inline-block;width:14px;height:14px;background:#2e7d32;border-radius:3px;margin-right:6px;vertical-align:middle"></span>scambiatore<br>
-      <span style="display:inline-block;width:14px;height:14px;background:#6a1b9a;border-radius:3px;margin-right:6px;vertical-align:middle"></span>raso/altro
+      <strong>Parcheggi</strong><br>
+      <span style="display:inline-block;width:14px;height:14px;background:#1565c0;border-radius:3px;margin-right:6px;vertical-align:middle"></span>a pagamento<br>
+      <span style="display:inline-block;width:14px;height:14px;background:#2e7d32;border-radius:3px;margin-right:6px;vertical-align:middle"></span>gratuito<br>
+      <span style="display:inline-block;width:14px;height:14px;background:#546e7a;border-radius:3px;margin-right:6px;vertical-align:middle"></span>tariffa N/D
     `;
     return legendDiv;
   };
@@ -262,7 +262,8 @@
   // ── Layer groups ──────────────────────────────────────────────────────
   const stradeLayer   = L.layerGroup().addTo(map);  // polyline strade
   const markersLayer  = L.layerGroup().addTo(map);  // cerchi scambiatori
-  const comuneLayer   = L.layerGroup().addTo(map);  // parcheggi Comune
+  const comuneLayer      = L.layerGroup().addTo(map);  // parcheggi Comune
+  const osmParkingLayer  = L.layerGroup().addTo(map);  // parcheggi OSM
   let firstLoad = true;
 
   // ── Emoji per chiave fattore ─────────────────────────────────────────
@@ -463,6 +464,91 @@
     }
   }
 
+  // ── Parcheggi OSM da Overpass ────────────────────────────────────────
+  async function caricaParcheggOSM() {
+    const query = encodeURIComponent(`
+      [out:json][timeout:30];
+      (
+        node["amenity"="parking"](44.47,11.29,44.54,11.41);
+        way["amenity"="parking"](44.47,11.29,44.54,11.41);
+      );
+      out center 100;
+    `);
+    const url = `https://overpass.kumi.systems/api/interpreter?data=${query}`;
+
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) return;
+      const data = await res.json();
+      osmParkingLayer.clearLayers();
+
+      // Set nomi già presenti nei parcheggi Comune (per evitare duplicati)
+      const nomiComune = new Set([
+        'parcheggio riva reno', 'parcheggio viii agosto',
+        'parcheggio autostazione', 'sant\'orsola'
+      ]);
+
+      let count = 0;
+      for (const el of data.elements || []) {
+        // Salta parcheggi privati
+        if (el.tags?.access === 'private') continue;
+
+        // Coordinate (node o way con center)
+        const lat = el.lat ?? el.center?.lat;
+        const lon = el.lon ?? el.center?.lon;
+        if (!lat || !lon) continue;
+
+        const nome = el.tags?.name || '';
+        const fee = el.tags?.fee;
+        const tipo = el.tags?.parking || 'surface';
+        const capacity = el.tags?.capacity || '';
+
+        // Evita duplicati con parcheggi Comune
+        if (nome && nomiComune.has(nome.toLowerCase())) continue;
+
+        // Colore basato su fee
+        const color = fee === 'yes' ? '#1565c0'
+                    : fee === 'no'  ? '#2e7d32'
+                    : '#546e7a';  // grigio = non specificato
+
+        const tariffa = fee === 'yes' ? 'A pagamento'
+                      : fee === 'no'  ? 'Gratuito'
+                      : 'Tariffa N/D';
+
+        const icon = L.divIcon({
+          className: '',
+          html: `<div style="
+            background:${color};color:#fff;
+            width:20px;height:20px;border-radius:4px;
+            display:flex;align-items:center;justify-content:center;
+            font-size:10px;font-weight:700;
+            border:2px solid rgba(255,255,255,0.8);
+            box-shadow:0 2px 4px rgba(0,0,0,0.4);">P</div>`,
+          iconSize: [20,20], iconAnchor: [10,10], popupAnchor: [0,-12],
+        });
+
+        L.marker([lat, lon], { icon })
+          .bindPopup(`
+            <div class="popup-name">${nome || 'Parcheggio'}</div>
+            <div class="popup-row">
+              Tipo: <strong>${tipo}</strong><br>
+              ${capacity ? `Posti: <strong>${capacity}</strong><br>` : ''}
+              <span style="display:inline-block;background:${color};
+                color:#fff;padding:2px 10px;border-radius:12px;
+                font-size:.75rem;font-weight:700;margin-top:4px;">
+                ${tariffa}
+              </span>
+            </div>
+          `)
+          .addTo(osmParkingLayer);
+        count++;
+      }
+      console.log(`[Bologna Parking] parcheggi OSM: ${count}`);
+    } catch(e) {
+      console.warn('[Bologna Parking] OSM parking non disponibile:', e);
+    }
+  }
+
   // ── Scambiatori live SostaBo ───────────────────────────────────────────
   async function caricaParcheggi() {
     const statusEl    = document.getElementById("status");
@@ -482,16 +568,6 @@
       markersLayer.clearLayers();
       const bounds = [];
 
-      // Prima aggiungi statici (così i live sono sopra)
-      try {
-        const resS2 = await fetch(`${API}/parcheggi/statici`,
-                                  { signal: AbortSignal.timeout(4000) });
-        if (resS2.ok) {
-          const sl = await resS2.json();
-          sl.forEach(p => { const b = _addMarker(p, true); if (b) bounds.push(b); });
-        }
-      } catch (_) {}
-
       lista.forEach(p => {
         const b = _addMarker(p, false);
         if (b) bounds.push(b);
@@ -502,7 +578,7 @@
         firstLoad = false;
       }
 
-      statusEl.textContent = `${lista.length} live + 10 stimati — ${new Date().toLocaleTimeString("it-IT")}`;
+      statusEl.textContent = `${lista.length} live — ${new Date().toLocaleTimeString("it-IT")}`;
 
     } catch (err) {
       console.error("[Bologna Parking] fetch fallita:", err);
@@ -628,6 +704,7 @@
   caricaStrade();
   caricaParcheggi();
   caricaParcheggioComune();
+  caricaParcheggOSM();
   caricaEventi();
   aggiornaBannerCondizioni();
   setInterval(caricaStrade, 5 * 60 * 1000);
